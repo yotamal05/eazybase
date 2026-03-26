@@ -1015,6 +1015,7 @@
 const SUPABASE_URL = 'https://nnkvneigeemokmvxcudk.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ua3ZuZWlnZWVtb2ttdnhjdWRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMzUxMzQsImV4cCI6MjA4OTcxMTEzNH0.reN3VIyVEH2O4wKHOLMO0YkUnR9Heyvdyy0WQxbnTzQ';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const RESEND_KEY = 're_Uab2ewhW_Bs71ojy9zUHjTDcqfDNFEAmL';
 
 // ── STATE ──
 let currentUser = null;      // { id, username }
@@ -2544,6 +2545,28 @@ async function loadCardView(recordId) {
     </div>`;
   const qrDiv = document.getElementById('card-qr');
   if (qrDiv && window.QRCode) new QRCode(qrDiv,{text:record.id,width:150,height:150,colorDark:'#1a1916',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+}
+
+// ── EMAIL ──
+async function sendWelcomeEmail(firstName, email) {
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'EazyBase <welcome@eazybase.app>',
+        to: email,
+        subject: `Welcome to EazyBase, ${firstName}!`,
+        template_id: '40cb9c95-022a-4a34-b6f5-d3fa61d0c512',
+        variables: { firstName: firstName }
+      })
+    });
+  } catch(e) {
+    logError('sendWelcomeEmail', e);
+  }
 }
 
 // ── DARK MODE ──
