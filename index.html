@@ -1263,6 +1263,7 @@ async function authSubmit() {
     if (existing) { showAuthError('An account with this email already exists.'); btn.textContent = 'Create account'; btn.disabled = false; return; }
     const { data, error } = await sb.from('users').insert({ email, password_hash: passwordHash, first_name: firstName, last_name: lastName }).select().single();
     if (error) { showAuthError('Something went wrong. Please try again.'); btn.textContent = 'Create account'; btn.disabled = false; return; }
+    sendWelcomeEmail(firstName, email);
     loginSuccess(data);
 
   } else {
