@@ -2549,6 +2549,41 @@ async function loadCardView(recordId) {
 
 // ── EMAIL ──
 async function sendWelcomeEmail(firstName, email) {
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f5f3ee;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;background:#f5f3ee;">
+<tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+<tr><td align="center" style="padding-bottom:20px;">
+  <span style="font-family:Georgia,serif;font-size:26px;color:#1a1916;">Eazy<span style="color:#1D9E75;">Base</span></span>
+</td></tr>
+<tr><td style="background:#fff;border-radius:16px;border:1px solid #e2ddd6;overflow:hidden;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+  <tr><td style="background:#1D9E75;height:5px;font-size:0;">&nbsp;</td></tr>
+  <tr><td style="padding:36px 40px;">
+    <h1 style="font-family:Georgia,serif;font-size:28px;color:#1a1916;margin:0 0 12px;font-weight:400;">Welcome, ${firstName}! 👋</h1>
+    <p style="font-size:15px;color:#7a7670;line-height:1.7;margin:0 0 28px;">Your EazyBase account is ready. Create custom databases, manage records, and organize anything — no coding required.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
+      <tr><td style="padding:10px 0;border-bottom:1px solid #f5f3ee;font-size:14px;color:#1a1916;"><span style="color:#1D9E75;margin-right:8px;">⊞</span><b>Custom Databases</b> — build any structure with custom fields</td></tr>
+      <tr><td style="padding:10px 0;border-bottom:1px solid #f5f3ee;font-size:14px;color:#1a1916;"><span style="color:#1D9E75;margin-right:8px;">⌕</span><b>Search & Filter</b> — find any record instantly</td></tr>
+      <tr><td style="padding:10px 0;border-bottom:1px solid #f5f3ee;font-size:14px;color:#1a1916;"><span style="color:#1D9E75;margin-right:8px;">◫</span><b>QR Check-in</b> — scan members at events</td></tr>
+      <tr><td style="padding:10px 0;font-size:14px;color:#1a1916;"><span style="color:#1D9E75;margin-right:8px;">▣</span><b>Membership Cards</b> — digital ID cards for your members</td></tr>
+    </table>
+    <table cellpadding="0" cellspacing="0">
+    <tr><td style="background:#1D9E75;border-radius:100px;">
+      <a href="https://eazybase.app" style="display:inline-block;padding:13px 32px;color:#fff;text-decoration:none;font-size:15px;font-weight:500;border-radius:100px;">Open EazyBase →</a>
+    </td></tr>
+    </table>
+  </td></tr>
+  <tr><td style="padding:20px 40px;border-top:1px solid #e2ddd6;background:#faf9f7;">
+    <p style="font-size:12px;color:#b0aca6;margin:0;">You're receiving this because you created an account at <a href="https://eazybase.app" style="color:#1D9E75;text-decoration:none;">eazybase.app</a>. © 2026 EazyBase</p>
+  </td></tr>
+  </table>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
   try {
     await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -2560,8 +2595,7 @@ async function sendWelcomeEmail(firstName, email) {
         from: 'EazyBase <welcome@eazybase.app>',
         to: email,
         subject: `Welcome to EazyBase, ${firstName}!`,
-        template_id: '40cb9c95-022a-4a34-b6f5-d3fa61d0c512',
-        variables: { firstName: firstName }
+        html
       })
     });
   } catch(e) {
