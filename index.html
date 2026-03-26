@@ -1015,7 +1015,6 @@
 const SUPABASE_URL = 'https://nnkvneigeemokmvxcudk.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ua3ZuZWlnZWVtb2ttdnhjdWRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMzUxMzQsImV4cCI6MjA4OTcxMTEzNH0.reN3VIyVEH2O4wKHOLMO0YkUnR9Heyvdyy0WQxbnTzQ';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const RESEND_KEY = 're_5aWFvycb_MVgWSJVouSS5oB7aVoXCo1oL';
 
 // ── STATE ──
 let currentUser = null;      // { id, username }
@@ -2550,25 +2549,16 @@ async function loadCardView(recordId) {
 // ── EMAIL ──
 async function sendWelcomeEmail(firstName, email) {
   try {
-    const res = await fetch('https://api.resend.com/emails', {
+    await fetch('https://nnkvneigeemokmvxcudk.supabase.co/functions/v1/send-welcome-email', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${RESEND_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: 'EazyBase <welcome@eazybase.app>',
-        to: email,
-        subject: `Welcome to EazyBase, ${firstName}!`,
-        html: `<h1>Welcome, ${firstName}!</h1><p>Your EazyBase account is ready.</p><p><a href="https://eazybase.app">Open EazyBase</a></p>`
-      })
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ firstName, email })
     });
-    const data = await res.json();
-    if (!res.ok) logError('sendWelcomeEmail', data);
   } catch(e) {
     logError('sendWelcomeEmail', e);
   }
 }
+
 // ── DARK MODE ──
 const MOON_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 const SUN_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
