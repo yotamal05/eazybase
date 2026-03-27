@@ -1762,6 +1762,8 @@ async function loadRecords() {
   const { data, error } = await sb.from('records').select('*')
     .eq('database_id', currentDb.id)
     .lte('rank', rank)
+    .neq('status', 'pending')
+    .neq('status', 'rejected')
     .order('created_at', { ascending: false });
   if (error) { list.innerHTML = '<div class="loading">Error loading records.</div>'; return; }
   allRecords = data || [];
