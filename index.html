@@ -131,6 +131,19 @@
   #page-auth { min-height: 100vh; display: none; align-items: center; justify-content: center; padding: 2rem; flex: 1; }
   #page-reset { min-height: 100vh; display: none; align-items: center; justify-content: center; padding: 2rem; flex: 1; }
   #page-reset.active { display: flex; }
+  #page-approvals { display: none; flex: 1; min-height: 100vh; }
+  #page-approvals.active { display: block; }
+  .approval-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 12px; }
+  .approval-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+  .approval-card-name { font-size: 16px; font-weight: 600; color: var(--text); }
+  .approval-card-db { font-size: 12px; color: var(--text-faint); margin-top: 2px; }
+  .approval-card-fields { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1rem; }
+  .approval-field-tag { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 12px; color: var(--text-muted); }
+  .approval-btns { display: flex; gap: 8px; }
+  .btn-approve { background: var(--accent); color: #fff; border: none; border-radius: 100px; padding: 8px 20px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+  .btn-approve:hover { background: var(--accent-dark); }
+  .btn-reject { background: none; border: 1px solid var(--border-strong); color: var(--text-muted); border-radius: 100px; padding: 8px 20px; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+  .btn-reject:hover { border-color: var(--danger); color: var(--danger); }
   #page-auth.active { display: flex; }
   #page-auth.active { display: flex; }
   .auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 2.75rem 2.5rem; width: 100%; max-width: 420px; animation: modalIn 0.25s ease; }
@@ -738,6 +751,7 @@
     <button class="btn btn-primary" onclick="openCreateDb()">+ New database</button>
   </div>
   <div id="db-list-wrap"></div>
+  <div id="approvals-nav-wrap" style="display:none;margin-top:1rem;"></div>
 </div>
 
 <!-- DATABASE PAGE -->
@@ -1105,6 +1119,96 @@
   </div>
 </div>
 
+<!-- MODAL: Registration Form Settings -->
+<div class="modal-overlay" id="modal-registration">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📋 Registration Form</div>
+      <button class="modal-close" onclick="closeModal('modal-registration')">×</button>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.25rem;line-height:1.6;">
+      Create a public form that anyone can fill out to register — no EazyBase account needed.
+    </p>
+
+    <!-- Enable toggle -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);margin-bottom:1.25rem;">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--text);">Enable registration form</div>
+        <div style="font-size:12px;color:var(--text-faint);margin-top:2px;">Anyone with the link can register</div>
+      </div>
+      <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
+        <input type="checkbox" id="reg-enabled" style="opacity:0;width:0;height:0;" onchange="onRegEnabledChange()">
+        <span id="reg-toggle-track" style="position:absolute;inset:0;background:var(--border-strong);border-radius:100px;transition:background 0.2s;"></span>
+        <span id="reg-toggle-thumb" style="position:absolute;left:3px;top:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform 0.2s;"></span>
+      </label>
+    </div>
+
+    <div id="reg-settings-body">
+      <!-- Form link -->
+      <div id="reg-link-wrap" style="display:none;margin-bottom:1.25rem;">
+        <label class="form-label">Registration link</label>
+        <div style="display:flex;gap:8px;">
+          <input class="form-input" id="reg-link-input" readonly style="font-size:12px;font-family:monospace;">
+          <button class="btn" onclick="copyRegLink()">Copy</button>
+        </div>
+      </div>
+
+      <!-- Title -->
+      <div class="form-group">
+        <label class="form-label">Form title</label>
+        <input class="form-input" id="reg-title" placeholder="e.g. Join our club">
+      </div>
+
+      <!-- Description -->
+      <div class="form-group">
+        <label class="form-label">Description (optional)</label>
+        <textarea class="form-textarea" id="reg-description" rows="2" placeholder="Tell people what they're signing up for…"></textarea>
+      </div>
+
+      <!-- Approval mode -->
+      <div class="form-group">
+        <label class="form-label">Approval mode</label>
+        <select class="form-select" id="reg-auto-approve">
+          <option value="true">Auto-approve — records added instantly</option>
+          <option value="false">Manual approval — you review each registration</option>
+        </select>
+      </div>
+
+      <!-- Max registrations -->
+      <div class="form-group">
+        <label class="form-label">Max registrations (optional)</label>
+        <input class="form-input" id="reg-max" type="number" placeholder="Leave empty for unlimited" min="1">
+      </div>
+
+      <!-- Close date -->
+      <div class="form-group">
+        <label class="form-label">Close date (optional)</label>
+        <input class="form-input" id="reg-close-date" type="datetime-local">
+        <p style="font-size:12px;color:var(--text-faint);margin-top:4px;">Form will automatically stop accepting registrations after this date.</p>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-registration')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRegistrationSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- APPROVALS PAGE -->
+<div id="page-approvals" class="page">
+  <div style="max-width:720px;margin:0 auto;padding:2rem 1.5rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;">
+      <div>
+        <h1 style="font-family:'DM Serif Display',serif;font-size:28px;color:var(--text);margin:0 0 4px;">Pending Approvals</h1>
+        <p style="font-size:14px;color:var(--text-muted);margin:0;">Review and approve registration requests.</p>
+      </div>
+      <button class="btn" onclick="goHome()">← Back</button>
+    </div>
+    <div id="approvals-list"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1448,12 +1552,15 @@ async function loadDatabases() {
     return;
   }
 
-  // Fetch record counts for owned databases
+  // Fetch record counts and pending counts for owned databases
   const ownedIds = owned.map(d => d.id);
-  let countMap = {};
+  let countMap = {}, pendingMap = {};
   if (ownedIds.length) {
-    const { data: recRows } = await sb.from('records').select('database_id').in('database_id', ownedIds);
-    (recRows || []).forEach(r => { countMap[r.database_id] = (countMap[r.database_id] || 0) + 1; });
+    const { data: recRows } = await sb.from('records').select('database_id, status').in('database_id', ownedIds);
+    (recRows || []).forEach(r => {
+      countMap[r.database_id] = (countMap[r.database_id] || 0) + 1;
+      if (r.status === 'pending') pendingMap[r.database_id] = (pendingMap[r.database_id] || 0) + 1;
+    });
   }
 
   let html = '';
@@ -1472,6 +1579,7 @@ async function loadDatabases() {
           ${(db.fields||[]).length} field${(db.fields||[]).length!==1?'s':''}
           <span style="color:var(--border-strong);">·</span>
           <span style="color:var(--text-muted);font-weight:500;">${recCount.toLocaleString()} record${recCount!==1?'s':''}</span>
+          ${(pendingMap[db.id]||0) > 0 ? `<span style="background:var(--danger);color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:100px;margin-left:4px;">${pendingMap[db.id]} pending</span>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -1490,6 +1598,18 @@ async function loadDatabases() {
   }
 
   wrap.innerHTML = html;
+
+  // Show approvals link if any pending
+  const totalPending = Object.values(pendingMap).reduce((a,b)=>a+b,0);
+  const appNavWrap = document.getElementById('approvals-nav-wrap');
+  if (appNavWrap) {
+    if (totalPending > 0) {
+      appNavWrap.style.display = 'block';
+      appNavWrap.innerHTML = `<button class="btn btn-primary" onclick="loadApprovalsPage()" style="width:100%;">📋 ${totalPending} pending approval${totalPending!==1?'s':''} — Review now</button>`;
+    } else {
+      appNavWrap.style.display = 'none';
+    }
+  }
 
   wrap.querySelectorAll('.db-card').forEach(card => {
     card.addEventListener('click', e => {
@@ -1599,6 +1719,7 @@ async function openDatabase(id) {
   if (isOwner()) {
     btns += `<button class="btn" onclick="openPermissions()">Share</button>`;
     btns += `<button class="btn" onclick="openPublicLink()">Public link</button>`;
+    btns += `<button class="btn" onclick="openRegistrationForm()">📋 Registration</button>`;
     btns += `<button class="btn" onclick="openManageFields()">Manage fields</button>`;
   }
   btns += `<button class="btn" onclick="exportRecords()">Export</button>`;
@@ -2766,6 +2887,335 @@ async function submitResetPassword() {
   }
 }
 
+// ── REGISTRATION FORM ──
+
+async function openRegistrationForm() {
+  const db = currentDb;
+  // Pre-fill form
+  document.getElementById('reg-title').value = db.registration_title || db.name;
+  document.getElementById('reg-description').value = db.registration_description || '';
+  document.getElementById('reg-auto-approve').value = db.registration_auto_approve === false ? 'false' : 'true';
+  document.getElementById('reg-max').value = db.registration_max || '';
+  document.getElementById('reg-close-date').value = db.registration_close_date
+    ? new Date(db.registration_close_date).toISOString().slice(0,16) : '';
+
+  const enabled = !!db.registration_enabled;
+  setRegToggle(enabled);
+  if (enabled && db.registration_token) {
+    document.getElementById('reg-link-wrap').style.display = 'block';
+    document.getElementById('reg-link-input').value = buildRegUrl(db.registration_token);
+  } else {
+    document.getElementById('reg-link-wrap').style.display = 'none';
+  }
+  openModal('modal-registration');
+}
+
+function setRegToggle(enabled) {
+  document.getElementById('reg-enabled').checked = enabled;
+  document.getElementById('reg-toggle-track').style.background = enabled ? 'var(--accent)' : 'var(--border-strong)';
+  document.getElementById('reg-toggle-thumb').style.transform = enabled ? 'translateX(20px)' : 'translateX(0)';
+}
+
+function onRegEnabledChange() {
+  const enabled = document.getElementById('reg-enabled').checked;
+  setRegToggle(enabled);
+}
+
+function buildRegUrl(token) {
+  return location.origin + location.pathname + '?register=' + token;
+}
+
+function copyRegLink() {
+  const url = document.getElementById('reg-link-input').value;
+  navigator.clipboard.writeText(url).catch(()=>{});
+  toast('Registration link copied!');
+}
+
+async function saveRegistrationSettings() {
+  const enabled = document.getElementById('reg-enabled').checked;
+  const title = sanitizeText(document.getElementById('reg-title').value.trim(), 100);
+  const description = sanitizeText(document.getElementById('reg-description').value.trim(), 500);
+  const autoApprove = document.getElementById('reg-auto-approve').value === 'true';
+  const maxVal = document.getElementById('reg-max').value.trim();
+  const closeDateVal = document.getElementById('reg-close-date').value;
+
+  const regMax = maxVal ? parseInt(maxVal) : null;
+  const closeDate = closeDateVal ? new Date(closeDateVal).toISOString() : null;
+
+  // Generate token if enabling for first time
+  let token = currentDb.registration_token;
+  if (enabled && !token) token = crypto.randomUUID();
+
+  const updates = {
+    registration_enabled: enabled,
+    registration_token: token || null,
+    registration_title: title || currentDb.name,
+    registration_description: description || null,
+    registration_auto_approve: autoApprove,
+    registration_max: regMax,
+    registration_close_date: closeDate,
+  };
+
+  const { error } = await sb.from('databases').update(updates).eq('id', currentDb.id);
+  if (error) { logError('saveRegistrationSettings', error); toast('Could not save. Please try again.'); return; }
+
+  // Update local state
+  Object.assign(currentDb, updates);
+
+  if (enabled && token) {
+    document.getElementById('reg-link-wrap').style.display = 'block';
+    document.getElementById('reg-link-input').value = buildRegUrl(token);
+  } else {
+    document.getElementById('reg-link-wrap').style.display = 'none';
+  }
+
+  toast(enabled ? 'Registration form enabled!' : 'Registration form disabled.');
+  closeModal('modal-registration');
+}
+
+// ── PUBLIC REGISTRATION VIEW ──
+async function loadRegistrationView(token) {
+  document.getElementById('nav-right').innerHTML = '';
+
+  const { data: db, error } = await sb.from('databases').select('*').eq('registration_token', token).eq('registration_enabled', true).maybeSingle();
+
+  if (error || !db) {
+    showRegError('This registration form is not available or has been closed.');
+    return;
+  }
+
+  // Check close date
+  if (db.registration_close_date && new Date(db.registration_close_date) < new Date()) {
+    showRegError('This registration form has closed.');
+    return;
+  }
+
+  // Check max registrations
+  if (db.registration_max) {
+    const { count } = await sb.from('records').select('id', { count: 'exact', head: true })
+      .eq('database_id', db.id).neq('status', 'rejected');
+    if (count >= db.registration_max) {
+      showRegError('This registration form has reached its maximum number of registrations.');
+      return;
+    }
+  }
+
+  // Build the form
+  const fields = db.fields || [];
+  const title = db.registration_title || db.name;
+  const desc = db.registration_description || '';
+
+  document.title = title + ' — Registration';
+  document.body.style.background = 'var(--bg)';
+
+  const fieldHtml = fields.map(f => {
+    const req = f.required ? ' required' : '';
+    const reqLabel = f.required ? ' <span style="color:var(--danger);">*</span>' : '';
+    let input = '';
+    if (f.type === 'textarea') {
+      input = `<textarea class="form-textarea" name="${escAttr(f.name)}"${req} rows="3" placeholder="${escAttr(f.name)}"></textarea>`;
+    } else if (f.type === 'dropdown') {
+      const opts = (f.options||[]).map(o => `<option value="${escAttr(o)}">${escHtml(o)}</option>`).join('');
+      input = `<select class="form-select" name="${escAttr(f.name)}"${req}><option value="">— Select —</option>${opts}</select>`;
+    } else if (f.type === 'checkbox') {
+      input = `<div class="checkbox-wrap"><input class="checkbox-field" type="checkbox" name="${escAttr(f.name)}" id="reg-cb-${escAttr(f.name)}"><label class="checkbox-label" for="reg-cb-${escAttr(f.name)}">Yes</label></div>`;
+    } else if (f.type === 'rating') {
+      const stars = [1,2,3,4,5].map(n => `<span class="rating-star" data-val="${n}" onclick="setRating(this,'${escAttr(f.name)}')">★</span>`).join('');
+      input = `<div class="rating-input">${stars}<input type="hidden" name="${escAttr(f.name)}"${req} value=""></div>`;
+    } else {
+      const inputType = f.type==='number'?'number':f.type==='date'?'date':f.type==='email'?'email':f.type==='phone'?'tel':f.type==='url'?'url':'text';
+      input = `<input class="form-input" type="${inputType}" name="${escAttr(f.name)}"${req} placeholder="${escAttr(f.name)}">`;
+    }
+    return `<div class="form-group"><label class="form-label">${escHtml(f.name)}${reqLabel}</label>${input}</div>`;
+  }).join('');
+
+  // Render the page
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'max-width:520px;margin:0 auto;padding:2rem 1.5rem 4rem;';
+  wrap.innerHTML = `
+    <div style="text-align:center;margin-bottom:2rem;">
+      <div style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--accent);margin-bottom:1rem;">Eazy<span style="color:var(--text);">Base</span></div>
+      <h1 style="font-family:'DM Serif Display',serif;font-size:28px;color:var(--text);margin:0 0 8px;letter-spacing:-0.3px;">${escHtml(title)}</h1>
+      ${desc ? `<p style="font-size:15px;color:var(--text-muted);line-height:1.6;margin:0;">${escHtml(desc)}</p>` : ''}
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:2rem 1.75rem;" id="reg-form-card">
+      <div id="reg-form-fields">${fieldHtml}</div>
+      <div id="reg-form-msg" style="display:none;font-size:13px;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:1rem;"></div>
+      <button class="btn btn-primary btn-full" id="reg-submit-btn" onclick="submitRegistration('${db.id}', ${db.registration_auto_approve})">Submit registration</button>
+    </div>`;
+  document.getElementById('page-home').parentNode.insertBefore(wrap, document.getElementById('page-home'));
+
+  // Hide all pages
+  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+  document.querySelector('nav').style.display = 'none';
+  document.querySelector('.site-footer').style.display = 'none';
+}
+
+function showRegError(msg) {
+  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+  document.querySelector('nav').style.display = 'none';
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'text-align:center;padding:4rem 2rem;font-family:sans-serif;color:var(--text-muted);max-width:400px;margin:0 auto;';
+  wrap.innerHTML = `<div style="font-size:32px;margin-bottom:1rem;">🚫</div><p style="font-size:16px;line-height:1.6;">${escHtml(msg)}</p>`;
+  document.body.appendChild(wrap);
+}
+
+async function submitRegistration(dbId, autoApprove) {
+  const btn = document.getElementById('reg-submit-btn');
+  btn.textContent = 'Submitting…'; btn.disabled = true;
+
+  // Collect form data
+  const rawData = {};
+  document.querySelectorAll('#reg-form-fields [name]').forEach(el => {
+    if (el.type === 'checkbox') rawData[el.name] = el.checked ? 'true' : 'false';
+    else rawData[el.name] = el.value.trim();
+  });
+
+  // Validate required fields
+  const { data: db } = await sb.from('databases').select('fields').eq('id', dbId).single();
+  const fields = db?.fields || [];
+  const missing = fields.filter(f => f.required && !rawData[f.name]);
+  if (missing.length) {
+    showRegMsg('Please fill in all required fields: ' + missing.map(f=>f.name).join(', '), 'error');
+    btn.textContent = 'Submit registration'; btn.disabled = false;
+    return;
+  }
+
+  const data = sanitizeRecordData(rawData, fields);
+  const status = autoApprove ? 'approved' : 'pending';
+  const searchText = sanitizeText(Object.values(data).filter(Boolean).join(' '), 5000);
+
+  const { error } = await sb.from('records').insert({
+    database_id: dbId,
+    user_id: null,
+    data,
+    search_text: searchText,
+    rank: 1,
+    status
+  });
+
+  if (error) {
+    logError('submitRegistration', error);
+    showRegMsg('Something went wrong. Please try again.', 'error');
+    btn.textContent = 'Submit registration'; btn.disabled = false;
+    return;
+  }
+
+  // Show success
+  document.getElementById('reg-form-card').innerHTML = `
+    <div style="text-align:center;padding:2rem 1rem;">
+      <div style="font-size:48px;margin-bottom:1rem;">✅</div>
+      <h2 style="font-family:'DM Serif Display',serif;font-size:24px;color:var(--text);margin:0 0 8px;">
+        ${autoApprove ? 'Registration complete!' : 'Request submitted!'}
+      </h2>
+      <p style="font-size:15px;color:var(--text-muted);line-height:1.6;margin:0;">
+        ${autoApprove ? 'You have been successfully registered.' : 'Your registration is pending approval. You will be notified when it is reviewed.'}
+      </p>
+    </div>`;
+}
+
+function showRegMsg(text, type) {
+  const el = document.getElementById('reg-form-msg');
+  if (!el) return;
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.background = type === 'error' ? 'var(--danger-light)' : 'var(--accent-light)';
+  el.style.color = type === 'error' ? 'var(--danger)' : 'var(--accent-dark)';
+}
+
+// ── APPROVALS PAGE ──
+async function loadApprovalsPage() {
+  setNavLoggedIn();
+  showPage('page-approvals');
+  const list = document.getElementById('approvals-list');
+  list.innerHTML = '<div class="loading">Loading…</div>';
+
+  // Get all databases owned by user
+  const { data: dbs } = await sb.from('databases').select('id, name, fields, cards_enabled').eq('user_id', currentUser.id);
+  if (!dbs || !dbs.length) {
+    list.innerHTML = '<div style="text-align:center;color:var(--text-faint);padding:3rem;font-size:14px;">No pending approvals.</div>';
+    return;
+  }
+
+  const dbIds = dbs.map(d => d.id);
+  const dbMap = Object.fromEntries(dbs.map(d => [d.id, d]));
+
+  const { data: pending } = await sb.from('records').select('*').in('database_id', dbIds).eq('status', 'pending').order('created_at', { ascending: true });
+
+  if (!pending || !pending.length) {
+    list.innerHTML = '<div style="text-align:center;color:var(--text-faint);padding:3rem;font-size:14px;">🎉 No pending approvals — all caught up!</div>';
+    return;
+  }
+
+  list.innerHTML = pending.map(r => {
+    const db = dbMap[r.database_id];
+    const fields = db?.fields || [];
+    const tf = fields[0];
+    const name = tf ? (r.data[tf.name] || 'Unknown') : 'Record';
+    const preview = fields.slice(1,4).map(f => r.data[f.name] ? `<span class="approval-field-tag">${escHtml(f.name)}: ${escHtml(String(r.data[f.name]))}</span>` : '').filter(Boolean).join('');
+    const date = new Date(r.created_at).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<div class="approval-card" id="approval-${escAttr(r.id)}">
+      <div class="approval-card-header">
+        <div>
+          <div class="approval-card-name">${escHtml(name)}</div>
+          <div class="approval-card-db">${escHtml(db?.name || '')} · ${date}</div>
+        </div>
+      </div>
+      ${preview ? `<div class="approval-card-fields">${preview}</div>` : ''}
+      <div class="approval-btns">
+        <button class="btn-approve" onclick="approveRecord('${escAttr(r.id)}', '${escAttr(r.database_id)}')">✓ Approve</button>
+        <button class="btn-reject" onclick="rejectRecord('${escAttr(r.id)}')">✗ Reject</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function approveRecord(recordId, dbId) {
+  const { error } = await sb.from('records').update({ status: 'approved' }).eq('id', recordId);
+  if (error) { logError('approveRecord', error); toast('Could not approve. Please try again.'); return; }
+  document.getElementById('approval-' + recordId)?.remove();
+  toast('Approved!');
+
+  // Check if we should send card email
+  const { data: db } = await sb.from('databases').select('cards_enabled, fields').eq('id', dbId).single();
+  if (db?.cards_enabled) {
+    const { data: record } = await sb.from('records').select('*').eq('id', recordId).single();
+    if (record) {
+      const emailField = (db.fields||[]).find(f => f.type === 'email');
+      const nameField = (db.fields||[]).find(f => f.name === 'Full Name') || db.fields?.[0];
+      if (emailField && record.data[emailField.name]) {
+        sendCardEmail(record.data[nameField?.name] || 'Member', record.data[emailField.name], recordId);
+      }
+    }
+  }
+
+  // Check if list is now empty
+  if (!document.querySelector('.approval-card')) {
+    document.getElementById('approvals-list').innerHTML = '<div style="text-align:center;color:var(--text-faint);padding:3rem;font-size:14px;">🎉 No pending approvals — all caught up!</div>';
+  }
+}
+
+async function rejectRecord(recordId) {
+  if (!confirm('Reject this registration?')) return;
+  const { error } = await sb.from('records').update({ status: 'rejected' }).eq('id', recordId);
+  if (error) { logError('rejectRecord', error); toast('Could not reject. Please try again.'); return; }
+  document.getElementById('approval-' + recordId)?.remove();
+  toast('Rejected.');
+  if (!document.querySelector('.approval-card')) {
+    document.getElementById('approvals-list').innerHTML = '<div style="text-align:center;color:var(--text-faint);padding:3rem;font-size:14px;">🎉 No pending approvals — all caught up!</div>';
+  }
+}
+
+async function sendCardEmail(name, email, recordId) {
+  try {
+    await fetch('https://nnkvneigeemokmvxcudk.supabase.co/functions/v1/send-card-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ name, email, cardUrl: buildCardUrl(recordId) })
+    });
+  } catch(e) { logError('sendCardEmail', e); }
+}
+
 // ── DARK MODE ──
 const MOON_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 const SUN_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
@@ -2820,6 +3270,13 @@ function switchPrivacyLang(lang) {
 
   const publicToken = urlParams.get('view');
   if (publicToken) { await loadPublicView(publicToken); return; }
+  const registerToken = urlParams.get('register');
+  if (registerToken) { await loadRegistrationView(registerToken); return; }
+  if (location.pathname.endsWith('/approvals') || urlParams.get('approvals') === '1') {
+    const savedForApprovals = localStorage.getItem('eazybase_user');
+    if (savedForApprovals) { try { currentUser = JSON.parse(savedForApprovals); } catch(e) {} }
+    if (currentUser) { await loadApprovalsPage(); return; } else { showPage('page-auth'); return; }
+  }
 
   const saved = localStorage.getItem('eazybase_user');
   if (saved) {
