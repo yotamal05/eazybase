@@ -2648,6 +2648,10 @@ function showForgotMsg(text, type) {
 
 async function loadResetPage(token) {
   resetToken = token;
+
+  // Hide nav, show minimal header
+  document.getElementById('nav-right').innerHTML = '';
+
   // Verify token is valid before showing form
   const { data, error } = await sb.from('password_resets')
     .select('id, expires_at, used')
@@ -2768,8 +2772,8 @@ function switchPrivacyLang(lang) {
   const urlParams = new URLSearchParams(location.search);
   const cardId = urlParams.get('card');
   if (cardId) { await loadCardView(cardId); return; }
-  const resetToken = urlParams.get('reset');
-  if (resetToken) { await loadResetPage(resetToken); return; }
+  const resetTokenParam = urlParams.get('reset');
+  if (resetTokenParam) { await loadResetPage(resetTokenParam); return; }
 
   // Check for public view link
   const publicToken = urlParams.get('view');
