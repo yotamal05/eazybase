@@ -651,7 +651,10 @@
 <body>
 
 <nav>
-  <div class="nav-logo" onclick="goHome()">Eazy<span>Base</span></div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div id="nav-back"></div>
+    <div class="nav-logo" onclick="goHome()">Eazy<span>Base</span></div>
+  </div>
   <div class="nav-right" id="nav-right"></div>
 </nav>
 
@@ -1414,14 +1417,14 @@ function setNavLoggedIn() {
     <button class="dark-toggle" onclick="toggleDark()" title="Toggle dark mode">${getDarkIcon()}</button>
     <button class="btn btn-sm nav-btn-desktop" onclick="openSettings()">⚙ Settings</button>
     <button class="btn btn-sm nav-btn-desktop" onclick="logout()">Log out</button>
-    <button class="btn btn-sm nav-btn-mobile" onclick="openSettings()" title="Settings">⚙</button>
-    <button class="btn btn-sm nav-btn-mobile" onclick="logout()" title="Log out">↩</button>`;
+    <button class="btn btn-sm nav-btn-mobile" onclick="openSettings()" title="Settings">⚙</button>`;
 }
 function startApp() { setNavLoggedIn(); goHome(); }
 
 // ── HOME ──
 function goHome() {
   stopScanner(); currentDb = null; currentDbRole = null;
+  document.getElementById('nav-back').innerHTML = '';
   setNavLoggedIn();
   showPage('page-home');
   loadDatabases();
@@ -1607,14 +1610,14 @@ async function openDatabase(id) {
   const _dark = document.body.classList.contains('dark');
   document.getElementById('nav-right').innerHTML = `
     <span class="nav-db-name">${escHtml(db.name)}</span>
-    <button class="btn btn-ghost btn-sm" onclick="goHome()">← All databases</button>
+    <button class="btn btn-ghost btn-sm nav-btn-desktop" onclick="goHome()">← All databases</button>
     <span class="nav-user nav-btn-desktop" style="cursor:pointer;" onclick="openSettings()" title="Account settings">${escHtml(_dn)}</span>
     <button class="dark-toggle" onclick="toggleDark()" title="Toggle dark mode">${getDarkIcon()}</button>
     <button class="btn btn-sm nav-btn-desktop" onclick="openSettings()">⚙ Settings</button>
     <button class="btn btn-sm nav-btn-desktop" onclick="logout()">Log out</button>
-    <button class="btn btn-sm nav-btn-mobile" onclick="openSettings()" title="Settings">⚙</button>
-    <button class="btn btn-sm nav-btn-mobile" onclick="logout()" title="Log out">↩</button>`;
+    <button class="btn btn-sm nav-btn-mobile" onclick="openSettings()" title="Settings">⚙</button>`;
 
+  document.getElementById('nav-back').innerHTML = `<button class="btn btn-ghost btn-sm nav-btn-mobile" onclick="goHome()" style="font-size:13px;padding:6px 10px;white-space:nowrap;">← Back</button>`;
   document.getElementById('search-input').value = '';
   currentSort = { field: null, dir: 'desc' };
   showPage('page-db');
