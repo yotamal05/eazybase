@@ -128,6 +128,8 @@
 
   /* AUTH */
   #page-auth { min-height: 100vh; display: none; align-items: center; justify-content: center; padding: 2rem; flex: 1; }
+  #page-reset { min-height: 100vh; display: none; align-items: center; justify-content: center; padding: 2rem; flex: 1; }
+  #page-reset.active { display: flex; }
   #page-auth.active { display: flex; }
   #page-auth.active { display: flex; }
   .auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 2.75rem 2.5rem; width: 100%; max-width: 420px; animation: modalIn 0.25s ease; }
@@ -623,6 +625,42 @@
       </div>
     </div>
     <button class="btn btn-primary btn-full" id="auth-submit-btn" onclick="authSubmit()">Log in</button>
+    <div id="auth-forgot-wrap" style="text-align:center;margin-top:12px;">
+      <button onclick="showForgotPassword()" style="background:none;border:none;color:var(--text-faint);font-size:13px;cursor:pointer;text-decoration:underline;">Forgot password?</button>
+    </div>
+
+    <!-- FORGOT PASSWORD FORM -->
+    <div id="auth-forgot-form" style="display:none;">
+      <div style="height:1px;background:var(--border);margin:1.5rem 0;"></div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem;line-height:1.6;">Enter your email and we'll send you a link to reset your password.</p>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" id="forgot-email" type="email" placeholder="you@example.com">
+      </div>
+      <div id="forgot-msg" style="display:none;font-size:13px;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:1rem;"></div>
+      <button class="btn btn-primary btn-full" id="forgot-submit-btn" onclick="submitForgotPassword()">Send reset link</button>
+      <div style="text-align:center;margin-top:12px;">
+        <button onclick="hideForgotPassword()" style="background:none;border:none;color:var(--text-faint);font-size:13px;cursor:pointer;text-decoration:underline;">Back to login</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RESET PASSWORD PAGE -->
+<div id="page-reset" class="page" style="min-height:100vh;display:none;align-items:center;justify-content:center;padding:2rem;flex:1;">
+  <div class="auth-card">
+    <div class="auth-logo">Eazy<span>Base</span></div>
+    <div class="auth-subtitle">Choose a new password.</div>
+    <div id="reset-error" class="auth-error"></div>
+    <div class="form-group">
+      <label class="form-label">New password</label>
+      <input class="form-input" id="reset-new-password" type="password" placeholder="At least 6 characters" onkeydown="if(event.key==='Enter')submitResetPassword()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Confirm password</label>
+      <input class="form-input" id="reset-confirm-password" type="password" placeholder="Repeat password" onkeydown="if(event.key==='Enter')submitResetPassword()">
+    </div>
+    <button class="btn btn-primary btn-full" id="reset-submit-btn" onclick="submitResetPassword()">Set new password</button>
   </div>
 </div>
 
@@ -2560,6 +2598,134 @@ async function sendWelcomeEmail(firstName, email) {
   }
 }
 
+// ── PASSWORD RESET ──
+let resetToken = null;
+
+function showForgotPassword() {
+  document.getElementById('auth-forgot-form').style.display = 'block';
+  document.getElementById('auth-forgot-wrap').style.display = 'none';
+  document.getElementById('forgot-email').value = document.getElementById('auth-email').value || '';
+  document.getElementById('forgot-email').focus();
+}
+
+function hideForgotPassword() {
+  document.getElementById('auth-forgot-form').style.display = 'none';
+  document.getElementById('auth-forgot-wrap').style.display = 'block';
+  document.getElementById('forgot-msg').style.display = 'none';
+}
+
+async function submitForgotPassword() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const btn = document.getElementById('forgot-submit-btn');
+  const msg = document.getElementById('forgot-msg');
+
+  if (!email) { showForgotMsg('Please enter your email.', 'error'); return; }
+
+  btn.textContent = 'Sending…'; btn.disabled = true;
+
+  try {
+    await fetch('https://nnkvneigeemokmvxcudk.supabase.co/functions/v1/send-reset-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ email })
+    });
+    showForgotMsg('If an account exists for this email, a reset link has been sent. Check your inbox.', 'success');
+    btn.textContent = 'Send reset link'; btn.disabled = false;
+  } catch(e) {
+    logError('submitForgotPassword', e);
+    showForgotMsg('Something went wrong. Please try again.', 'error');
+    btn.textContent = 'Send reset link'; btn.disabled = false;
+  }
+}
+
+function showForgotMsg(text, type) {
+  const el = document.getElementById('forgot-msg');
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.background = type === 'success' ? 'var(--accent-light)' : 'var(--danger-light)';
+  el.style.color = type === 'success' ? 'var(--accent-dark)' : 'var(--danger)';
+}
+
+async function loadResetPage(token) {
+  resetToken = token;
+  // Verify token is valid before showing form
+  const { data, error } = await sb.from('password_resets')
+    .select('id, expires_at, used')
+    .eq('token', token)
+    .eq('used', false)
+    .maybeSingle();
+
+  if (error || !data) {
+    showPage('page-auth');
+    toast('This reset link is invalid or has already been used.');
+    return;
+  }
+
+  if (new Date(data.expires_at) < new Date()) {
+    showPage('page-auth');
+    toast('This reset link has expired. Please request a new one.');
+    return;
+  }
+
+  showPage('page-reset');
+}
+
+async function submitResetPassword() {
+  const newPw = document.getElementById('reset-new-password').value;
+  const confirmPw = document.getElementById('reset-confirm-password').value;
+  const btn = document.getElementById('reset-submit-btn');
+  const errEl = document.getElementById('reset-error');
+
+  errEl.classList.remove('show');
+
+  if (!newPw || newPw.length < 6) {
+    errEl.textContent = 'Password must be at least 6 characters.';
+    errEl.classList.add('show'); return;
+  }
+  if (newPw !== confirmPw) {
+    errEl.textContent = 'Passwords do not match.';
+    errEl.classList.add('show'); return;
+  }
+
+  btn.textContent = 'Saving…'; btn.disabled = true;
+
+  try {
+    // Get user from token
+    const { data: resetData } = await sb.from('password_resets')
+      .select('user_id, expires_at, used')
+      .eq('token', resetToken)
+      .eq('used', false)
+      .maybeSingle();
+
+    if (!resetData || new Date(resetData.expires_at) < new Date()) {
+      errEl.textContent = 'This reset link has expired.';
+      errEl.classList.add('show');
+      btn.textContent = 'Set new password'; btn.disabled = false;
+      return;
+    }
+
+    // Hash new password
+    const newHash = await hashPassword(newPw);
+
+    // Update password
+    await sb.from('users').update({ password_hash: newHash }).eq('id', resetData.user_id);
+
+    // Mark token as used
+    await sb.from('password_resets').update({ used: true }).eq('token', resetToken);
+
+    toast('Password updated! Please log in.');
+    resetToken = null;
+    showPage('page-auth');
+    btn.textContent = 'Set new password'; btn.disabled = false;
+
+  } catch(e) {
+    logError('submitResetPassword', e);
+    errEl.textContent = 'Something went wrong. Please try again.';
+    errEl.classList.add('show');
+    btn.textContent = 'Set new password'; btn.disabled = false;
+  }
+}
+
 // ── DARK MODE ──
 const MOON_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 const SUN_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
@@ -2602,6 +2768,8 @@ function switchPrivacyLang(lang) {
   const urlParams = new URLSearchParams(location.search);
   const cardId = urlParams.get('card');
   if (cardId) { await loadCardView(cardId); return; }
+  const resetToken = urlParams.get('reset');
+  if (resetToken) { await loadResetPage(resetToken); return; }
 
   // Check for public view link
   const publicToken = urlParams.get('view');
