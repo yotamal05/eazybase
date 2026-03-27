@@ -516,74 +516,129 @@
   }
 
   @media (max-width: 600px) {
-    /* Nav — show logo + logout only, hide username & db name on tiny screens */
+    /* ── NAV ── */
     nav { padding: 0 1rem; height: 52px; }
     .nav-db-name { display: none; }
     .nav-user { display: none; }
-    .btn-sm { font-size: 12px; padding: 5px 10px; }
+    .btn-sm { font-size: 13px; padding: 7px 13px; }
 
-    /* Pages — reduce padding */
-    #page-home { padding: 1.5rem 1rem; }
-    #page-db { padding: 1.25rem 1rem 3rem; }
+    /* ── PAGES ── */
+    #page-home { padding: 1.5rem 1rem 2rem; }
+    #page-db { padding: 1.25rem 1rem 5rem; }
 
-    /* Home header */
-    .home-header h1 { font-size: 26px; }
+    /* ── HOME ── */
+    .home-header h1 { font-size: 28px; }
+    .home-header p { font-size: 15px; }
     .home-actions { gap: 8px; }
+    .db-grid { grid-template-columns: 1fr; gap: 10px; }
+    .db-card { padding: 1.1rem 1.2rem; border-radius: 14px; }
+    .db-card-name { font-size: 16px; }
+    .db-card-desc { font-size: 13px; }
+    .db-card-delete { opacity: 1; width: 30px; height: 30px; font-size: 18px; }
 
-    /* DB grid — single column */
-    .db-grid { grid-template-columns: 1fr; }
-
-    /* DB card delete — always visible on mobile (no hover) */
-    .db-card-delete { opacity: 0.5; }
-
-    /* DB page header — stack title above buttons */
-    .db-page-header { flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem; }
-    .db-page-actions { justify-content: flex-start; width: 100%; }
+    /* ── DB PAGE ── */
+    .db-page-header { flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
     .db-page-title { font-size: 22px; }
+    .db-page-desc { font-size: 13px; }
+    .db-page-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      width: 100%;
+    }
+    .db-page-actions .btn {
+      font-size: 13px;
+      padding: 8px 14px;
+      border-radius: 100px;
+      flex: 1;
+      min-width: calc(50% - 6px);
+      text-align: center;
+      white-space: nowrap;
+    }
+    .db-page-actions .btn-primary {
+      flex: 2;
+      min-width: 100%;
+      font-size: 15px;
+      padding: 12px 16px;
+    }
 
-    /* Buttons in db actions — smaller */
-    .db-page-actions .btn { font-size: 12px; padding: 6px 12px; }
+    /* ── SEARCH ── */
+    .search-bar { font-size: 16px; }
+    .search-count { font-size: 13px; }
 
-    /* Record row */
-    .record-row { padding: 12px 14px; }
-    .record-row-preview { max-width: 180px; }
+    /* ── RECORDS ── */
+    .record-row { padding: 14px 16px; border-radius: 12px; margin-bottom: 6px; }
+    .record-row-title { font-size: 15px; }
+    .record-row-preview { font-size: 13px; max-width: 200px; }
+    .record-row-arrow { font-size: 20px; }
 
-    /* Modals — full width, less padding */
-    .modal-overlay { padding: 0.5rem; align-items: flex-end; }
-    .modal { border-radius: 20px 20px 0 0; max-height: 94vh; padding: 1.75rem 1.25rem; }
+    /* ── SORT BAR ── */
+    #sort-bar { overflow-x: auto; padding-bottom: 4px; flex-wrap: nowrap; }
+    .sort-btn { font-size: 12px; padding: 5px 12px; white-space: nowrap; }
+
+    /* ── MODALS — slide up from bottom ── */
+    .modal-overlay { padding: 0; align-items: flex-end; }
+    .modal {
+      border-radius: 24px 24px 0 0;
+      max-height: 92vh;
+      padding: 1.5rem 1.25rem 2rem;
+      width: 100%;
+    }
     .modal-wide { max-width: 100%; }
+    .modal-title { font-size: 18px; }
+    .modal-footer { padding-top: 1rem; gap: 8px; }
+    .modal-footer .btn { flex: 1; padding: 12px; font-size: 14px; }
 
-    /* Record detail — stack label above value instead of side by side */
-    .record-detail-field { grid-template-columns: 1fr; gap: 2px; padding: 10px 0; }
-    .record-detail-label { font-size: 12px; }
-    .record-detail-value { font-size: 14px; }
+    /* ── RECORD DETAIL ── */
+    .record-detail-fields { gap: 0; }
+    .record-detail-field { grid-template-columns: 1fr; gap: 2px; padding: 12px 0; }
+    .record-detail-label { font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
+    .record-detail-value { font-size: 15px; }
 
-    /* Add field row — stack select + button below input */
-    .add-field-row { flex-wrap: wrap; }
+    /* ── FORMS ── */
+    .form-input, .form-select, .form-textarea, .search-bar { font-size: 16px !important; }
+    .form-input { padding: 11px 14px; border-radius: 10px; }
+    .form-select { padding: 11px 14px; border-radius: 10px; }
+    .form-label { font-size: 13px; }
+    .form-group { margin-bottom: 1rem; }
+
+    /* ── ADD FIELD ROW ── */
+    .add-field-row { flex-wrap: wrap; gap: 8px; }
     .add-field-row .form-input { width: 100%; flex: unset; }
     .add-field-row .form-select { flex: 1; }
+    .add-field-row .btn { padding: 10px 16px; }
 
-    /* Auth card */
-    .auth-card { padding: 1.75rem 1.25rem; border-radius: 12px; }
+    /* ── AUTH ── */
+    #page-auth { padding: 1.5rem 1rem; align-items: flex-start; padding-top: 3rem; }
+    .auth-card { padding: 2rem 1.5rem; border-radius: 20px; }
+    .auth-logo { font-size: 28px; margin-bottom: 4px; }
+    .auth-subtitle { font-size: 14px; margin-bottom: 1.5rem; }
+    .auth-tabs { margin-bottom: 1.5rem; }
+    .auth-tab { font-size: 14px; padding: 8px 16px; }
 
-    /* Permission add row — wrap */
-    .permission-add-row { flex-wrap: wrap; }
+    /* ── PERMISSIONS ── */
+    .permission-add-row { flex-wrap: wrap; gap: 8px; }
     .permission-add-row .form-input { width: 100%; }
     .permission-add-row .form-select { flex: 1; }
+    .permission-item { padding: 10px 0; }
 
-    /* Approved / not found screens — smaller text */
-    .approved-title { font-size: 36px; }
-    .approved-name { font-size: 18px; }
-    .notfound-title { font-size: 32px; }
+    /* ── SCANNER ── */
+    .scanner-db-row { flex-wrap: wrap; gap: 8px; }
+    .scanner-title { font-size: 16px; }
+    .scanner-tabs { gap: 6px; }
+    .scanner-tab { font-size: 13px; padding: 6px 14px; }
 
-    /* Scanner db row — wrap */
-    .scanner-db-row { flex-wrap: wrap; }
+    /* ── APPROVED / NOT FOUND ── */
+    .approved-title { font-size: 40px; }
+    .approved-name { font-size: 20px; }
+    .notfound-title { font-size: 36px; }
 
-    /* Bulk import textarea */
-    #bulk-import-text { font-size: 16px; } /* prevents iOS zoom on focus */
+    /* ── FOOTER ── */
+    .site-footer-inner { padding: 1rem; gap: 6px; font-size: 12px; }
 
-    /* All inputs/selects — prevent iOS zoom (font-size must be >= 16px) */
-    .form-input, .form-select, .form-textarea, .search-bar { font-size: 16px; }
+    /* ── MISC ── */
+    #bulk-import-text { font-size: 16px; }
+    .rank-badge { font-size: 10px; padding: 2px 8px; }
   }
 </style>
 </head>
@@ -672,7 +727,6 @@
   </div>
   <div class="home-actions">
     <button class="btn btn-primary" onclick="openCreateDb()">+ New database</button>
-    <button class="btn" onclick="openScanner()">Scan QR code</button>
   </div>
   <div id="db-list-wrap"></div>
 </div>
@@ -771,14 +825,9 @@
       <input class="form-input" id="new-db-desc" placeholder="What is this database for?">
     </div>
     <div class="form-group">
-      <p style="font-size:12px;font-weight:500;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Choose one option</p>
-      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;user-select:none;margin-bottom:10px;">
-        <input type="checkbox" id="new-db-qr" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;margin-top:2px;" onchange="onDbTypeChange('qr')">
-        <div><span style="font-size:14px;font-weight:500;">Enable QR codes</span><p style="font-size:12px;color:var(--text-faint);margin-top:2px;">Each record gets a QR code for scanning at entrances and events.</p></div>
-      </label>
       <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;user-select:none;">
-        <input type="checkbox" id="new-db-cards" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;margin-top:2px;" onchange="onDbTypeChange('cards')">
-        <div><span style="font-size:14px;font-weight:500;">Enable Digital Membership Cards</span><p style="font-size:12px;color:var(--text-faint);margin-top:2px;">Each member gets a digital ID card with name, member ID, and QR code.</p></div>
+        <input type="checkbox" id="new-db-cards" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;margin-top:2px;">
+        <div><span style="font-size:14px;font-weight:500;">Enable Digital Membership Cards</span><p style="font-size:12px;color:var(--text-faint);margin-top:2px;">Each member gets a digital ID card with their name, member ID, and a QR code for check-in.</p></div>
       </label>
     </div>
     <div class="form-group">
@@ -1447,14 +1496,13 @@ function openCreateDb() {
   newDbFields = [];
   document.getElementById('new-db-name').value = '';
   document.getElementById('new-db-desc').value = '';
-  document.getElementById('new-db-qr').checked = false;
   document.getElementById('new-db-cards').checked = false;
   renderNewDbFields();
   openModal('modal-create-db');
   setTimeout(() => document.getElementById('new-db-name').focus(), 100);
 }
 function renderNewDbFields() {
-  const cardsChecked = document.getElementById('new-db-cards') && document.getElementById('new-db-cards').checked;
+  const cardsChecked = document.getElementById('new-db-cards')?.checked || false;
   // Locked card fields shown at top when cards enabled
   const lockedHtml = cardsChecked ? `
     <div class="field-item field-item-locked">
@@ -1501,14 +1549,13 @@ async function createDatabase() {
   const name = sanitizeText(document.getElementById('new-db-name').value.trim(), DB_NAME_MAX);
   if (!name) { toast('Please enter a database name.'); return; }
   const desc = sanitizeText(document.getElementById('new-db-desc').value.trim(), 300);
-  const qrEnabled = document.getElementById('new-db-qr').checked;
   const cardsEnabled = document.getElementById('new-db-cards').checked;
   let dbFields = [...newDbFields];
   if (cardsEnabled) {
     if (!dbFields.some(f=>f.name==='Full Name')) dbFields.unshift({name:'Full Name',type:'text',required:true});
     if (!dbFields.some(f=>f.type==='email')) dbFields.splice(1,0,{name:'Email',type:'email',required:true});
   }
-  const { data, error } = await sb.from('databases').insert({ name, description: desc, fields: dbFields, user_id: currentUser.id, qr_enabled: qrEnabled, cards_enabled: cardsEnabled }).select().single();
+  const { data, error } = await sb.from('databases').insert({ name, description: desc, fields: dbFields, user_id: currentUser.id, qr_enabled: cardsEnabled, cards_enabled: cardsEnabled }).select().single();
   if (error) { logError('createDatabase', error); toast('Could not create database. Please try again.'); return; }
   closeModal('modal-create-db');
   toast('Database created!');
@@ -1536,7 +1583,7 @@ async function openDatabase(id) {
 
   // Build action buttons based on role
   const actions = document.getElementById('db-page-actions');
-  let btns = currentDb.qr_enabled ? `<button class="btn" onclick="openScannerForDb()">Scan QR</button>` : '';
+  let btns = currentDb.cards_enabled ? `<button class="btn" onclick="openScannerForDb()">Scan QR</button>` : '';
   if (currentDb.cards_enabled && isOwner()) btns += `<button class="btn" onclick="openCardManager()">🪪 Cards</button>`;
   if (isOwner()) {
     btns += `<button class="btn" onclick="openPermissions()">Share</button>`;
@@ -1703,7 +1750,7 @@ function openRecordDetail(id) {
   const cardBtnWrap = document.getElementById('record-card-btn-wrap');
   if (cardBtnWrap) cardBtnWrap.innerHTML = currentDb.cards_enabled ? `<button class="btn btn-sm" onclick="openMemberCard('${escAttr(id)}')" style="margin-bottom:1rem;">🪪 View membership card</button>` : '';
   const qrSection = document.querySelector('.qr-section');
-  if (currentDb.qr_enabled) {
+  if (currentDb.cards_enabled) {
     qrSection.style.display = 'flex';
     const qrContainer = document.getElementById('qr-container');
     qrContainer.innerHTML = '';
@@ -2516,10 +2563,8 @@ function showPwError(msg) {
 function generateMemberID(id) { return id.replace(/-/g,'').slice(0,8).toUpperCase(); }
 function buildCardUrl(id) { return location.origin + location.pathname + '?card=' + id; }
 
-function onDbTypeChange(changed) {
-  if (changed==='qr' && document.getElementById('new-db-qr').checked) document.getElementById('new-db-cards').checked=false;
-  if (changed==='cards' && document.getElementById('new-db-cards').checked) document.getElementById('new-db-qr').checked=false;
-  renderNewDbFields(); // re-render to show/hide locked fields
+function onDbTypeChange() {
+  renderNewDbFields();
 }
 
 function openCardManager() { renderCardManagerList(); openModal('modal-card-manager'); }
