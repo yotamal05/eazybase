@@ -108,7 +108,8 @@
   body.dark { --nav-bg: rgba(20,20,18,0.94); }
   .nav-logo { font-family: 'DM Serif Display', serif; font-size: 20px; letter-spacing: -0.3px; cursor: pointer; }
   .nav-logo span { color: var(--accent); }
-  .nav-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .nav-right { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+  .nav-btn-mobile { display: none; }
   .nav-db-name { font-size: 13px; color: var(--text-muted); padding: 4px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 100px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .nav-user { font-size: 13px; color: var(--text-muted); font-weight: 500; }
 
@@ -517,10 +518,15 @@
 
   @media (max-width: 600px) {
     /* ── NAV ── */
-    nav { padding: 0 1rem; height: 52px; }
+    nav { padding: 0 1rem; height: 52px; overflow: hidden; }
     .nav-db-name { display: none; }
-    .nav-user { display: none; }
+    .nav-user { display: none !important; }
+    .nav-btn-desktop { display: none !important; }
+    .nav-btn-mobile { display: flex !important; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; font-size: 16px; border-radius: 50%; }
     .btn-sm { font-size: 13px; padding: 7px 13px; }
+    .nav-right { gap: 4px; flex-wrap: nowrap; }
+    .dark-toggle { width: 36px; height: 36px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .btn-ghost { font-size: 13px; padding: 6px 10px; white-space: nowrap; }
 
     /* ── PAGES ── */
     #page-home { padding: 1.5rem 1rem 2rem; }
@@ -1406,8 +1412,10 @@ function setNavLoggedIn() {
   document.getElementById('nav-right').innerHTML = `
     <span class="nav-user" style="cursor:pointer;" onclick="openSettings()" title="Account settings">${escHtml(displayName)}</span>
     <button class="dark-toggle" onclick="toggleDark()" title="Toggle dark mode">${getDarkIcon()}</button>
-    <button class="btn btn-sm" onclick="openSettings()">⚙ Settings</button>
-    <button class="btn btn-sm" onclick="logout()">Log out</button>`;
+    <button class="btn btn-sm nav-btn-desktop" onclick="openSettings()">⚙ Settings</button>
+    <button class="btn btn-sm nav-btn-desktop" onclick="logout()">Log out</button>
+    <button class="btn btn-sm nav-btn-mobile" onclick="openSettings()" title="Settings">⚙</button>
+    <button class="btn btn-sm nav-btn-mobile" onclick="logout()" title="Log out">↩</button>`;
 }
 function startApp() { setNavLoggedIn(); goHome(); }
 
@@ -1600,10 +1608,12 @@ async function openDatabase(id) {
   document.getElementById('nav-right').innerHTML = `
     <span class="nav-db-name">${escHtml(db.name)}</span>
     <button class="btn btn-ghost btn-sm" onclick="goHome()">← All databases</button>
-    <span class="nav-user" style="cursor:pointer;" onclick="openSettings()" title="Account settings">${escHtml(_dn)}</span>
+    <span class="nav-user nav-btn-desktop" style="cursor:pointer;" onclick="openSettings()" title="Account settings">${escHtml(_dn)}</span>
     <button class="dark-toggle" onclick="toggleDark()" title="Toggle dark mode">${getDarkIcon()}</button>
-    <button class="btn btn-sm" onclick="openSettings()">⚙ Settings</button>
-    <button class="btn btn-sm" onclick="logout()">Log out</button>`;
+    <button class="btn btn-sm nav-btn-desktop" onclick="openSettings()">⚙ Settings</button>
+    <button class="btn btn-sm nav-btn-desktop" onclick="logout()">Log out</button>
+    <button class="btn btn-sm nav-btn-mobile" onclick="openSettings()" title="Settings">⚙</button>
+    <button class="btn btn-sm nav-btn-mobile" onclick="logout()" title="Log out">↩</button>`;
 
   document.getElementById('search-input').value = '';
   currentSort = { field: null, dir: 'desc' };
