@@ -647,7 +647,7 @@
 </div>
 
 <!-- RESET PASSWORD PAGE -->
-<div id="page-reset" class="page" style="min-height:100vh;display:none;align-items:center;justify-content:center;padding:2rem;flex:1;">
+<div id="page-reset" class="page">
   <div class="auth-card">
     <div class="auth-logo">Eazy<span>Base</span></div>
     <div class="auth-subtitle">Choose a new password.</div>
@@ -2648,29 +2648,7 @@ function showForgotMsg(text, type) {
 
 async function loadResetPage(token) {
   resetToken = token;
-
-  // Hide nav, show minimal header
   document.getElementById('nav-right').innerHTML = '';
-
-  // Verify token is valid before showing form
-  const { data, error } = await sb.from('password_resets')
-    .select('id, expires_at, used')
-    .eq('token', token)
-    .eq('used', false)
-    .maybeSingle();
-
-  if (error || !data) {
-    showPage('page-auth');
-    toast('This reset link is invalid or has already been used.');
-    return;
-  }
-
-  if (new Date(data.expires_at) < new Date()) {
-    showPage('page-auth');
-    toast('This reset link has expired. Please request a new one.');
-    return;
-  }
-
   showPage('page-reset');
 }
 
@@ -2770,17 +2748,20 @@ function switchPrivacyLang(lang) {
   initDarkMode();
 
   const urlParams = new URLSearchParams(location.search);
+
+  // ── URL param checks ALWAYS run first — even if logged in ──
   const cardId = urlParams.get('card');
   if (cardId) { await loadCardView(cardId); return; }
-  const resetTokenParam = urlParams.get('reset');
-  if (resetTokenParam) { await loadResetPage(resetTokenParam); return; }
 
-  // Check for public view link
-  const publicToken = urlParams.get('view');
-  if (publicToken) {
-    await loadPublicView(publicToken);
+  const resetTokenParam = urlParams.get('reset');
+  if (resetTokenParam) {
+    localStorage.removeItem('eazybase_user'); // clear any session
+    await loadResetPage(resetTokenParam);
     return;
   }
+
+  const publicToken = urlParams.get('view');
+  if (publicToken) { await loadPublicView(publicToken); return; }
 
   const saved = localStorage.getItem('eazybase_user');
   if (saved) {
