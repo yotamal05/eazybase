@@ -133,6 +133,8 @@
   #page-reset.active { display: flex; }
   #page-approvals { display: none; flex: 1; min-height: 100vh; }
   #page-approvals.active { display: block; }
+  #page-register { display: none; flex: 1; min-height: 100vh; }
+  #page-register.active { display: block; }
   .approval-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 12px; }
   .approval-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
   .approval-card-name { font-size: 16px; font-weight: 600; color: var(--text); }
@@ -1207,6 +1209,11 @@
     </div>
     <div id="approvals-list"></div>
   </div>
+</div>
+
+<!-- REGISTRATION PAGE -->
+<div id="page-register" class="page">
+  <div style="max-width:520px;margin:0 auto;padding:2rem 1.5rem 4rem;" id="reg-page-inner"></div>
 </div>
 
 <div id="quick-menu" class="quick-menu" style="display:none;">
@@ -2870,37 +2877,22 @@ async function saveRegistrationSettings() {
 // ── PUBLIC REGISTRATION VIEW ──
 async function loadRegistrationView(token) {
   document.getElementById('nav-right').innerHTML = '';
+  document.getElementById('nav-back').innerHTML = '';
 
   const { data: db, error } = await sb.from('databases').select('*').eq('registration_token', token).eq('registration_enabled', true).maybeSingle();
 
-  if (error || !db) {
-    showRegError('This registration form is not available or has been closed.');
-    return;
-  }
+  if (error || !db) { showRegError('This registration form is not available or has been closed.'); return; }
+  if (db.registration_close_date && new Date(db.registration_close_date) < new Date()) { showRegError('This registration form has closed.'); return; }
 
-  // Check close date
-  if (db.registration_close_date && new Date(db.registration_close_date) < new Date()) {
-    showRegError('This registration form has closed.');
-    return;
-  }
-
-  // Check max registrations
   if (db.registration_max) {
-    const { count } = await sb.from('records').select('id', { count: 'exact', head: true })
-      .eq('database_id', db.id).neq('status', 'rejected');
-    if (count >= db.registration_max) {
-      showRegError('This registration form has reached its maximum number of registrations.');
-      return;
-    }
+    const { count } = await sb.from('records').select('id', { count: 'exact', head: true }).eq('database_id', db.id).neq('status', 'rejected');
+    if (count >= db.registration_max) { showRegError('This registration form has reached its maximum number of registrations.'); return; }
   }
 
-  // Build the form
   const fields = db.fields || [];
   const title = db.registration_title || db.name;
   const desc = db.registration_description || '';
-
   document.title = title + ' — Registration';
-  document.body.style.background = 'var(--bg)';
 
   const fieldHtml = fields.map(f => {
     const req = f.required ? ' required' : '';
@@ -2923,12 +2915,9 @@ async function loadRegistrationView(token) {
     return `<div class="form-group"><label class="form-label">${escHtml(f.name)}${reqLabel}</label>${input}</div>`;
   }).join('');
 
-  // Render the page
-  const wrap = document.createElement('div');
-  wrap.style.cssText = 'max-width:520px;margin:0 auto;padding:2rem 1.5rem 4rem;';
-  wrap.innerHTML = `
+  document.getElementById('reg-page-inner').innerHTML = `
     <div style="text-align:center;margin-bottom:2rem;">
-      <div style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--accent);margin-bottom:1rem;">Eazy<span style="color:var(--text);">Base</span></div>
+      <div style="font-family:'DM Serif Display',serif;font-size:22px;margin-bottom:1rem;">Eazy<span style="color:var(--accent);">Base</span></div>
       <h1 style="font-family:'DM Serif Display',serif;font-size:28px;color:var(--text);margin:0 0 8px;letter-spacing:-0.3px;">${escHtml(title)}</h1>
       ${desc ? `<p style="font-size:15px;color:var(--text-muted);line-height:1.6;margin:0;">${escHtml(desc)}</p>` : ''}
     </div>
@@ -2937,21 +2926,17 @@ async function loadRegistrationView(token) {
       <div id="reg-form-msg" style="display:none;font-size:13px;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:1rem;"></div>
       <button class="btn btn-primary btn-full" id="reg-submit-btn" onclick="submitRegistration('${db.id}', ${db.registration_auto_approve})">Submit registration</button>
     </div>`;
-  document.getElementById('page-home').parentNode.insertBefore(wrap, document.getElementById('page-home'));
 
-  // Hide all pages
-  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-  document.querySelector('nav').style.display = 'none';
-  document.querySelector('.site-footer').style.display = 'none';
+  showPage('page-register');
 }
 
 function showRegError(msg) {
-  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-  document.querySelector('nav').style.display = 'none';
-  const wrap = document.createElement('div');
-  wrap.style.cssText = 'text-align:center;padding:4rem 2rem;font-family:sans-serif;color:var(--text-muted);max-width:400px;margin:0 auto;';
-  wrap.innerHTML = `<div style="font-size:32px;margin-bottom:1rem;">🚫</div><p style="font-size:16px;line-height:1.6;">${escHtml(msg)}</p>`;
-  document.body.appendChild(wrap);
+  document.getElementById('reg-page-inner').innerHTML = `
+    <div style="text-align:center;padding:4rem 2rem;color:var(--text-muted);">
+      <div style="font-size:48px;margin-bottom:1rem;">🚫</div>
+      <p style="font-size:16px;line-height:1.6;">${escHtml(msg)}</p>
+    </div>`;
+  showPage('page-register');
 }
 
 async function submitRegistration(dbId, autoApprove) {
