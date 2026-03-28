@@ -1209,6 +1209,20 @@
   </div>
 </div>
 
+<div id="quick-menu" class="quick-menu" style="display:none;">
+  <button class="quick-menu-item" onclick="closeQuickMenu();exportRecords()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Export CSV
+  </button>
+  <button class="quick-menu-item" onclick="closeQuickMenu();openBulkImport('csv')">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Import CSV
+  </button>
+  <button class="quick-menu-item" onclick="closeQuickMenu();openBulkImport('manual')">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+    Import manually
+  </button>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1662,12 +1676,10 @@ async function openDatabase(id) {
   if (currentDb.cards_enabled && isOwner()) btns += `<button class="btn" onclick="openCardManager()">🪪 Cards</button>`;
   if (isOwner()) {
     btns += `<button class="btn" onclick="openPermissions()">Share</button>`;
-    btns += `<button class="btn" onclick="openPublicLink()">Public link</button>`;
     btns += `<button class="btn" onclick="openRegistrationForm()">📋 Registration</button>`;
     btns += `<button class="btn" onclick="openManageFields()">Manage fields</button>`;
   }
-  btns += `<button class="btn" onclick="exportRecords()">Export</button>`;
-  btns += `<button class="btn" onclick="openBulkImport()">Bulk import</button>`;
+  btns += `<button class="btn quick-btn" onclick="toggleQuickMenu(event)">⚡ Quick ▾</button>`;
   btns += `<button class="btn btn-primary" onclick="openAddRecord()">+ Add record</button>`;
   actions.innerHTML = btns;
 
@@ -2348,8 +2360,8 @@ async function executeCsvImport(){
   await loadRecords();
 }
 function handleImportSubmit(){if(csvImportMode==='csv')executeCsvImport();else executeBulkImport();}
-function openBulkImport() {
-  switchImportTab('csv'); csvHeaders=[]; csvRows=[];
+function openBulkImport(tab='csv') {
+  switchImportTab(tab); csvHeaders=[]; csvRows=[];
   const cpt=document.getElementById('csv-paste-text'); if(cpt)cpt.value='';
   const cms=document.getElementById('csv-mapping-section'); if(cms)cms.style.display='none';
   const cpv=document.getElementById('csv-preview'); if(cpv)cpv.innerHTML='';
@@ -3111,6 +3123,26 @@ async function sendCardEmail(name, email, recordId) {
       body: JSON.stringify({ name, email, cardUrl: buildCardUrl(recordId) })
     });
   } catch(e) { logError('sendCardEmail', e); }
+}
+
+// ── QUICK MENU ──
+function toggleQuickMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('quick-menu');
+  if (menu.style.display === 'none') {
+    const btn = e.currentTarget;
+    const rect = btn.getBoundingClientRect();
+    menu.style.display = 'block';
+    menu.style.position = 'fixed';
+    menu.style.top = (rect.bottom + 6) + 'px';
+    menu.style.left = rect.left + 'px';
+    setTimeout(() => document.addEventListener('click', closeQuickMenu, { once: true }), 0);
+  } else {
+    closeQuickMenu();
+  }
+}
+function closeQuickMenu() {
+  document.getElementById('quick-menu').style.display = 'none';
 }
 
 // ── DARK MODE ──
