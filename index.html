@@ -1376,13 +1376,6 @@ function sanitizeText(val, maxLen = FIELD_MAX_LENGTH) {
   return sanitizeValue(String(val ?? '')).slice(0, maxLen);
 }
 
-// ── PASSWORD HASH ──
-async function hashPassword(password) {
-  const data = new TextEncoder().encode(password);
-  const buf = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-
 // ── AUTH ──
 function switchAuthTab(mode) {
   authMode = mode;
@@ -1400,37 +1393,6 @@ function showAuthError(msg) {
   const el = document.getElementById('auth-error');
   el.textContent = msg; el.classList.add('show');
 }
-// ── RATE LIMITING ──
-const MAX_ATTEMPTS = 5;        // max failed attempts
-const LOCKOUT_MINUTES = 15;    // lockout duration
-const WINDOW_MINUTES = 30;     // rolling window to count attempts
-
-async function checkRateLimit(email) {
-  const windowStart = new Date(Date.now() - WINDOW_MINUTES * 60 * 1000).toISOString();
-  const { data, error } = await sb.from('login_attempts')
-    .select('id, success')
-    .eq('email', email)
-    .eq('success', false)
-    .gte('attempted_at', windowStart)
-    .order('attempted_at', { ascending: false });
-
-  if (error) return { blocked: false }; // fail open — don't lock out on DB error
-
-  const failCount = (data || []).length;
-  if (failCount >= MAX_ATTEMPTS) {
-    const minutesLeft = LOCKOUT_MINUTES;
-    return { blocked: true, failCount, minutesLeft };
-  }
-  return { blocked: false, failCount };
-}
-
-async function recordAttempt(email, success) {
-  await sb.from('login_attempts').insert({ email, success });
-  // Clean old attempts occasionally (1 in 10 chance)
-  if (Math.random() < 0.1) {
-    await sb.rpc('clean_old_attempts').catch(() => {});
-  }
-}
 
 async function authSubmit() {
   const email = document.getElementById('auth-email').value.trim().toLowerCase();
@@ -1443,71 +1405,50 @@ async function authSubmit() {
 
   btn.textContent = '…'; btn.disabled = true;
 
-  if (authMode === 'login') {
-    // Check rate limit before even hashing password
-    const rateCheck = await checkRateLimit(email);
-    if (rateCheck.blocked) {
-      showAuthError(`Too many failed attempts. Please wait ${LOCKOUT_MINUTES} minutes before trying again.`);
-      btn.textContent = 'Log in'; btn.disabled = false;
-      return;
-    }
-  }
-
-  const passwordHash = await hashPassword(password);
-
   if (authMode === 'register') {
     const firstName = sanitizeText(document.getElementById('auth-firstname').value.trim(), NAME_MAX_LENGTH);
     const lastName = sanitizeText(document.getElementById('auth-lastname').value.trim(), NAME_MAX_LENGTH);
     if (!firstName || !lastName) { showAuthError('Please enter your first and last name.'); btn.textContent = 'Create account'; btn.disabled = false; return; }
-    const { data: existing } = await sb.from('users').select('id').eq('email', email).maybeSingle();
-    if (existing) { showAuthError('An account with this email already exists.'); btn.textContent = 'Create account'; btn.disabled = false; return; }
-    const { data, error } = await sb.from('users').insert({ email, password_hash: passwordHash, first_name: firstName, last_name: lastName }).select().single();
-    if (error) { showAuthError('Something went wrong. Please try again.'); btn.textContent = 'Create account'; btn.disabled = false; return; }
-    sendWelcomeEmail(firstName, email);
-    loginSuccess(data);
+
+    const { data, error } = await sb.auth.signUp({ email, password, options: { data: { first_name: firstName, last_name: lastName } } });
+    if (error) { showAuthError(error.message || 'Something went wrong. Please try again.'); btn.textContent = 'Create account'; btn.disabled = false; return; }
+
+    // Insert profile
+    const userId = data.user?.id;
+    if (userId) {
+      await sb.from('profiles').insert({ id: userId, first_name: firstName, last_name: lastName });
+      sendWelcomeEmail(firstName, email);
+    }
+    await loginSuccess(data.user, firstName, lastName);
 
   } else {
-    const { data, error } = await sb.from('users').select('*').eq('email', email).maybeSingle();
-
-    if (error || !data || data.password_hash !== passwordHash) {
-      // Record failed attempt
-      await recordAttempt(email, false);
-
-      // Check how many attempts remain
-      const rateCheck = await checkRateLimit(email);
-      const remaining = MAX_ATTEMPTS - rateCheck.failCount;
-
-      if (rateCheck.blocked || remaining <= 0) {
-        showAuthError(`Too many failed attempts. Please wait ${LOCKOUT_MINUTES} minutes before trying again.`);
-      } else if (remaining <= 2) {
-        showAuthError(`Incorrect email or password. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining before lockout.`);
-      } else {
-        // Generic message — don't reveal whether email exists or not
-        showAuthError('Incorrect email or password.');
-      }
-      btn.textContent = 'Log in'; btn.disabled = false;
-      return;
-    }
-
-    // Success — record it and clear failed attempts
-    await recordAttempt(email, true);
-    loginSuccess(data);
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { showAuthError('Incorrect email or password.'); btn.textContent = 'Log in'; btn.disabled = false; return; }
+    await loginSuccess(data.user);
   }
 }
-function loginSuccess(user) {
-  currentUser = { id: user.id, email: user.email || '', firstName: user.first_name || '', lastName: user.last_name || '' };
-  localStorage.setItem('eazybase_user', JSON.stringify(currentUser));
+
+async function loginSuccess(user, firstName, lastName) {
+  // Load profile if names not provided
+  if (!firstName || !lastName) {
+    const { data: profile } = await sb.from('profiles').select('first_name, last_name').eq('id', user.id).maybeSingle();
+    firstName = profile?.first_name || user.user_metadata?.first_name || '';
+    lastName = profile?.last_name || user.user_metadata?.last_name || '';
+  }
+  currentUser = { id: user.id, email: user.email || '', firstName, lastName };
   document.getElementById('auth-email').value = '';
   document.getElementById('auth-password').value = '';
   document.getElementById('auth-submit-btn').disabled = false;
   document.getElementById('auth-error').classList.remove('show');
   startApp();
 }
-function logout() {
+
+async function logout() {
+  await sb.auth.signOut();
   currentUser = null; currentDb = null; currentDbRole = null;
-  localStorage.removeItem('eazybase_user');
   stopScanner();
   document.getElementById('nav-right').innerHTML = '';
+  document.getElementById('nav-back').innerHTML = '';
   showPage('page-auth');
   switchAuthTab('login');
 }
@@ -2154,16 +2095,16 @@ async function openPermissions() {
 }
 
 async function renderPermissions() {
-  const { data, error } = await sb.from('database_permissions').select('*, users(email, first_name, last_name)').eq('database_id', currentDb.id);
+  const { data, error } = await sb.from('database_permissions').select('*, profiles(first_name, last_name)').eq('database_id', currentDb.id);
   const list = document.getElementById('permission-list');
   if (error || !data || !data.length) {
     list.innerHTML = '<p style="font-size:13px;color:var(--text-faint);margin-bottom:0.5rem;">No one else has access yet.</p>';
     return;
   }
   list.innerHTML = data.map(p => {
-    const u = p.users;
-    const fullName = (u?.first_name && u?.last_name) ? `${u.first_name} ${u.last_name}` : (u?.email || '—');
-    const sub = u?.email ? `<span style="font-size:11px;color:var(--text-faint);display:block;margin-top:1px;">${escHtml(u.email)}</span>` : '';
+    const u = p.profiles;
+    const fullName = (u?.first_name && u?.last_name) ? `${u.first_name} ${u.last_name}` : '—';
+    const sub = '';
     return `<div class="permission-item">
       <span class="permission-item-user">${escHtml(fullName)}${sub}</span>
       <span class="permission-item-rank">${rankBadge(p.rank)}</span>
@@ -2178,7 +2119,9 @@ async function addPermission() {
   if (!email) { toast('Enter an email address.'); return; }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('Please enter a valid email address.'); return; }
 
-  const { data: user, error: uErr } = await sb.from('users').select('id, email, first_name, last_name').eq('email', email).maybeSingle();
+  // Look up user by email via custom RPC
+  const { data: user, error: uErr } = await sb.rpc('get_user_id_by_email', { lookup_email: email });
+  if (uErr || !user) { toast('No account found with this email address.'); return; }
   if (uErr || !user) { logError('addPermission lookup', uErr); toast('No account found with this email address.'); return; }
   if (user.id === currentUser.id) { toast("That's you — you already own this database."); return; }
 
@@ -2650,30 +2593,20 @@ async function saveSettings() {
   // Handle password change if any password field is filled
   const wantsPasswordChange = currentPw || newPw || confirmPw;
   if (wantsPasswordChange) {
-    if (!currentPw) { showPwError('Please enter your current password.'); return; }
     if (!newPw) { showPwError('Please enter a new password.'); return; }
     if (newPw.length < 6) { showPwError('New password must be at least 6 characters.'); return; }
     if (newPw !== confirmPw) { showPwError('Passwords do not match.'); return; }
-
-    // Verify current password
-    const currentHash = await hashPassword(currentPw);
-    const { data: user } = await sb.from('users').select('password_hash').eq('id', currentUser.id).single();
-    if (!user || user.password_hash !== currentHash) { showPwError('Current password is incorrect.'); return; }
-
-    // Update password
-    const newHash = await hashPassword(newPw);
-    const { error: pwErr } = await sb.from('users').update({ password_hash: newHash }).eq('id', currentUser.id);
+    const { error: pwErr } = await sb.auth.updateUser({ password: newPw });
     if (pwErr) { logError('updatePassword', pwErr); showPwError('Could not update password. Please try again.'); return; }
   }
 
-  // Update name
-  const { error: nameErr } = await sb.from('users').update({ first_name: firstName, last_name: lastName }).eq('id', currentUser.id);
+  // Update profile
+  const { error: nameErr } = await sb.from('profiles').update({ first_name: firstName, last_name: lastName }).eq('id', currentUser.id);
   if (nameErr) { logError('saveSettings', nameErr); toast('Could not save changes. Please try again.'); return; }
 
-  // Update local session
+  // Update local state
   currentUser.firstName = firstName;
   currentUser.lastName = lastName;
-  localStorage.setItem('eazybase_user', JSON.stringify(currentUser));
 
   closeModal('modal-settings');
   toast(wantsPasswordChange ? 'Name and password updated!' : 'Name updated!');
@@ -2780,8 +2713,6 @@ async function sendWelcomeEmail(firstName, email) {
 }
 
 // ── PASSWORD RESET ──
-let resetToken = null;
-
 function showForgotPassword() {
   document.getElementById('auth-forgot-form').style.display = 'block';
   document.getElementById('auth-forgot-wrap').style.display = 'none';
@@ -2797,26 +2728,12 @@ function hideForgotPassword() {
 
 async function submitForgotPassword() {
   const email = document.getElementById('forgot-email').value.trim();
-  const btn = document.getElementById('forgot-submit-btn');
-  const msg = document.getElementById('forgot-msg');
-
   if (!email) { showForgotMsg('Please enter your email.', 'error'); return; }
-
+  const btn = document.getElementById('forgot-submit-btn');
   btn.textContent = 'Sending…'; btn.disabled = true;
-
-  try {
-    await fetch('https://nnkvneigeemokmvxcudk.supabase.co/functions/v1/send-reset-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
-      body: JSON.stringify({ email })
-    });
-    showForgotMsg('If an account exists for this email, a reset link has been sent. Check your inbox.', 'success');
-    btn.textContent = 'Send reset link'; btn.disabled = false;
-  } catch(e) {
-    logError('submitForgotPassword', e);
-    showForgotMsg('Something went wrong. Please try again.', 'error');
-    btn.textContent = 'Send reset link'; btn.disabled = false;
-  }
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://eazybase.app/?reset=1' });
+  showForgotMsg('If an account exists for this email, a reset link has been sent. Check your inbox.', 'success');
+  btn.textContent = 'Send reset link'; btn.disabled = false;
 }
 
 function showForgotMsg(text, type) {
@@ -2827,8 +2744,7 @@ function showForgotMsg(text, type) {
   el.style.color = type === 'success' ? 'var(--accent-dark)' : 'var(--danger)';
 }
 
-async function loadResetPage(token) {
-  resetToken = token;
+async function loadResetPage() {
   document.getElementById('nav-right').innerHTML = '';
   showPage('page-reset');
 }
@@ -2838,55 +2754,16 @@ async function submitResetPassword() {
   const confirmPw = document.getElementById('reset-confirm-password').value;
   const btn = document.getElementById('reset-submit-btn');
   const errEl = document.getElementById('reset-error');
-
   errEl.classList.remove('show');
-
-  if (!newPw || newPw.length < 6) {
-    errEl.textContent = 'Password must be at least 6 characters.';
-    errEl.classList.add('show'); return;
-  }
-  if (newPw !== confirmPw) {
-    errEl.textContent = 'Passwords do not match.';
-    errEl.classList.add('show'); return;
-  }
-
+  if (!newPw || newPw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.classList.add('show'); return; }
+  if (newPw !== confirmPw) { errEl.textContent = 'Passwords do not match.'; errEl.classList.add('show'); return; }
   btn.textContent = 'Saving…'; btn.disabled = true;
-
-  try {
-    // Get user from token
-    const { data: resetData } = await sb.from('password_resets')
-      .select('user_id, expires_at, used')
-      .eq('token', resetToken)
-      .eq('used', false)
-      .maybeSingle();
-
-    if (!resetData || new Date(resetData.expires_at) < new Date()) {
-      errEl.textContent = 'This reset link has expired.';
-      errEl.classList.add('show');
-      btn.textContent = 'Set new password'; btn.disabled = false;
-      return;
-    }
-
-    // Hash new password
-    const newHash = await hashPassword(newPw);
-
-    // Update password
-    await sb.from('users').update({ password_hash: newHash }).eq('id', resetData.user_id);
-
-    // Mark token as used
-    await sb.from('password_resets').update({ used: true }).eq('token', resetToken);
-
-    toast('Password updated! Please log in.');
-    resetToken = null;
-    showPage('page-auth');
-    btn.textContent = 'Set new password'; btn.disabled = false;
-
-  } catch(e) {
-    logError('submitResetPassword', e);
-    errEl.textContent = 'Something went wrong. Please try again.';
-    errEl.classList.add('show');
-    btn.textContent = 'Set new password'; btn.disabled = false;
-  }
+  const { error } = await sb.auth.updateUser({ password: newPw });
+  if (error) { errEl.textContent = 'Something went wrong. Please try again.'; errEl.classList.add('show'); btn.textContent = 'Set new password'; btn.disabled = false; return; }
+  toast('Password updated! Please log in.');
+  await sb.auth.signOut();
+  showPage('page-auth');
+  btn.textContent = 'Set new password'; btn.disabled = false;
 }
 
 // ── REGISTRATION FORM ──
@@ -3259,46 +3136,38 @@ function switchPrivacyLang(lang) {
 
   const urlParams = new URLSearchParams(location.search);
 
-  // ── URL param checks ALWAYS run first — even if logged in ──
+  // ── Public URL params — no login needed ──
   const cardId = urlParams.get('card');
   if (cardId) { await loadCardView(cardId); return; }
 
-  const resetTokenParam = urlParams.get('reset');
-  if (resetTokenParam) {
-    localStorage.removeItem('eazybase_user'); // clear any session
-    await loadResetPage(resetTokenParam);
-    return;
-  }
-
   const publicToken = urlParams.get('view');
   if (publicToken) { await loadPublicView(publicToken); return; }
+
   const registerToken = urlParams.get('register');
   if (registerToken) { await loadRegistrationView(registerToken); return; }
-  if (location.pathname.endsWith('/approvals') || urlParams.get('approvals') === '1') {
-    const savedForApprovals = localStorage.getItem('eazybase_user');
-    if (savedForApprovals) { try { currentUser = JSON.parse(savedForApprovals); } catch(e) {} }
-    if (currentUser) { await loadApprovalsPage(); return; } else { showPage('page-auth'); return; }
+
+  // ── Password reset — Supabase sends user back with session ──
+  if (urlParams.get('reset') === '1') {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) { await loadResetPage(); return; }
   }
 
-  const saved = localStorage.getItem('eazybase_user');
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      // If saved session is missing firstName (old session), re-fetch from DB
-      if (parsed.id && !parsed.firstName) {
-        currentUser = parsed;
-        const { data: freshUser } = await sb.from('users').select('id, email, first_name, last_name').eq('id', parsed.id).maybeSingle();
-        if (freshUser) {
-          currentUser = { id: freshUser.id, email: freshUser.email || '', firstName: freshUser.first_name || '', lastName: freshUser.last_name || '' };
-          localStorage.setItem('eazybase_user', JSON.stringify(currentUser));
-        }
-      } else {
-        currentUser = parsed;
-      }
-      startApp(); return;
-    }
-    catch(e) { localStorage.removeItem('eazybase_user'); }
+  // ── Check Supabase session ──
+  const { data: { session } } = await sb.auth.getSession();
+
+  if (session?.user) {
+    const user = session.user;
+    const { data: profile } = await sb.from('profiles').select('first_name, last_name').eq('id', user.id).maybeSingle();
+    const firstName = profile?.first_name || user.user_metadata?.first_name || '';
+    const lastName = profile?.last_name || user.user_metadata?.last_name || '';
+    currentUser = { id: user.id, email: user.email || '', firstName, lastName };
+
+    // Handle approvals page
+    if (urlParams.get('approvals') === '1') { await loadApprovalsPage(); return; }
+
+    startApp(); return;
   }
+
   showPage('page-auth');
 })();
 </script>
