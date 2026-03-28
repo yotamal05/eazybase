@@ -3058,16 +3058,21 @@ async function approveRecord(recordId, dbId) {
   document.getElementById('approval-' + recordId)?.remove();
   toast('Approved!');
 
-  // Check if we should send card email
-  const { data: db } = await sb.from('databases').select('cards_enabled, fields').eq('id', dbId).single();
-  if (db?.cards_enabled) {
-    const { data: record } = await sb.from('records').select('*').eq('id', recordId).single();
-    if (record) {
-      const emailField = (db.fields||[]).find(f => f.type === 'email');
-      const nameField = (db.fields||[]).find(f => f.name === 'Full Name') || db.fields?.[0];
-      if (emailField && record.data[emailField.name]) {
-        sendCardEmail(record.data[nameField?.name] || 'Member', record.data[emailField.name], recordId);
-      }
+  // Load db and record to send approval email
+  const { data: db } = await sb.from('databases').select('name, cards_enabled, fields').eq('id', dbId).single();
+  const { data: record } = await sb.from('records').select('*').eq('id', recordId).single();
+
+  if (db && record) {
+    const emailField = (db.fields||[]).find(f => f.type === 'email');
+    const nameField = (db.fields||[]).find(f => f.name === 'Full Name') || db.fields?.[0];
+    const memberEmail = emailField ? record.data[emailField.name] : null;
+    const memberName = nameField ? (record.data[nameField.name] || 'Member') : 'Member';
+
+    if (memberEmail) {
+      // Send registration approved email
+      // Include card link only if cards are enabled
+      const cardUrl = db.cards_enabled ? buildCardUrl(recordId) : null;
+      sendRegistrationApprovedEmail(memberName, memberEmail, db.name, cardUrl);
     }
   }
 
@@ -3075,6 +3080,16 @@ async function approveRecord(recordId, dbId) {
   if (!document.querySelector('.approval-card')) {
     document.getElementById('approvals-list').innerHTML = '<div style="text-align:center;color:var(--text-faint);padding:3rem;font-size:14px;">🎉 No pending approvals — all caught up!</div>';
   }
+}
+
+async function sendRegistrationApprovedEmail(name, email, orgName, cardUrl) {
+  try {
+    await fetch('https://nnkvneigeemokmvxcudk.supabase.co/functions/v1/send-registration-approved', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ name, email, orgName, cardUrl })
+    });
+  } catch(e) { logError('sendRegistrationApprovedEmail', e); }
 }
 
 async function rejectRecord(recordId) {
