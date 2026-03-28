@@ -1627,6 +1627,8 @@ async function createDatabase() {
     if (!dbFields.some(f=>f.name==='Full Name')) dbFields.unshift({name:'Full Name',type:'text',required:true});
     if (!dbFields.some(f=>f.type==='email')) dbFields.splice(1,0,{name:'Email',type:'email',required:true});
   }
+  const { data: { session: dbSession } } = await sb.auth.getSession();
+  logError('createDatabase debug', { hasSession: !!dbSession, uid: dbSession?.user?.id, currentId: currentUser.id });
   const { data, error } = await sb.from('databases').insert({ name, description: desc, fields: dbFields, user_id: currentUser.id, qr_enabled: cardsEnabled, cards_enabled: cardsEnabled }).select().single();
   if (error) { logError('createDatabase', error); toast('Could not create database. Please try again.'); return; }
   closeModal('modal-create-db');
