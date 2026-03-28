@@ -2141,10 +2141,10 @@ async function addPermission() {
   if (!email) { toast('Enter an email address.'); return; }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('Please enter a valid email address.'); return; }
 
-  // Look up user by email via custom RPC
-  const { data: user, error: uErr } = await sb.rpc('get_user_id_by_email', { lookup_email: email });
-  if (uErr || !user) { toast('No account found with this email address.'); return; }
-  if (uErr || !user) { logError('addPermission lookup', uErr); toast('No account found with this email address.'); return; }
+  // Look up user by email via RPC (returns array — take first result)
+  const { data: users, error: uErr } = await sb.rpc('get_user_id_by_email', { lookup_email: email });
+  if (uErr || !users || users.length === 0) { toast('No account found with this email address.'); return; }
+  const user = users[0];
   if (user.id === currentUser.id) { toast("That's you — you already own this database."); return; }
 
   const { error } = await sb.from('database_permissions').upsert(
