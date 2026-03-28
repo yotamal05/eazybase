@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EazyBase</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
@@ -1121,6 +1122,37 @@
   </div>
 </div>
 
+<!-- MODAL: Analytics -->
+<div class="modal-overlay" id="modal-analytics">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <div class="modal-title">📊 Analytics</div>
+      <button class="modal-close" onclick="closeModal('modal-analytics')">×</button>
+    </div>
+
+    <!-- Stat cards -->
+    <div id="analytics-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem;"></div>
+
+    <!-- Growth chart -->
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;">
+      <div style="font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:1rem;">Member Growth</div>
+      <div style="position:relative;height:200px;">
+        <canvas id="analytics-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Recent activity -->
+    <div>
+      <div style="font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.75rem;">Recent Members</div>
+      <div id="analytics-recent"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal('modal-analytics')">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Registration Form Settings -->
 <div class="modal-overlay" id="modal-registration">
   <div class="modal">
@@ -1684,6 +1716,7 @@ async function openDatabase(id) {
   if (isOwner()) {
     btns += `<button class="btn" onclick="openPermissions()">Share</button>`;
     btns += `<button class="btn" onclick="openRegistrationForm()">📋 Registration</button>`;
+    btns += `<button class="btn" onclick="openAnalytics()">📊 Analytics</button>`;
     btns += `<button class="btn" onclick="openManageFields()">Manage fields</button>`;
   }
   btns += `<button class="btn quick-btn" onclick="toggleQuickMenu(event)">⚡ Quick ▾</button>`;
@@ -3128,6 +3161,125 @@ function toggleQuickMenu(e) {
 }
 function closeQuickMenu() {
   document.getElementById('quick-menu').style.display = 'none';
+}
+
+// ── ANALYTICS ──
+let analyticsChartInstance = null;
+
+async function openAnalytics() {
+  openModal('modal-analytics');
+  document.getElementById('analytics-stats').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:1rem;color:var(--text-faint);font-size:14px;">Loading…</div>';
+  document.getElementById('analytics-recent').innerHTML = '';
+
+  // Fetch all approved records for this database
+  const { data: records } = await sb.from('records')
+    .select('id, created_at, data, status')
+    .eq('database_id', currentDb.id)
+    .order('created_at', { ascending: true });
+
+  const all = records || [];
+  const approved = all.filter(r => r.status !== 'rejected');
+  const pending = all.filter(r => r.status === 'pending');
+
+  // New this month
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const newThisMonth = approved.filter(r => new Date(r.created_at) >= startOfMonth).length;
+
+  // ── Stat cards ──
+  const stats = [
+    { label: 'Total Members', value: approved.length, color: 'var(--accent)' },
+    { label: 'New This Month', value: newThisMonth, color: '#6366f1' },
+    { label: 'Pending Approval', value: pending.length, color: '#f59e0b' },
+  ];
+
+  document.getElementById('analytics-stats').innerHTML = stats.map(s => `
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:1.25rem;text-align:center;">
+      <div style="font-size:28px;font-weight:700;color:${s.color};font-family:'DM Serif Display',serif;">${s.value}</div>
+      <div style="font-size:12px;color:var(--text-faint);margin-top:4px;font-weight:500;">${s.label}</div>
+    </div>`).join('');
+
+  // ── Growth chart (cumulative by month) ──
+  const monthMap = {};
+  approved.forEach(r => {
+    const d = new Date(r.created_at);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    monthMap[key] = (monthMap[key] || 0) + 1;
+  });
+
+  const sortedMonths = Object.keys(monthMap).sort();
+  const labels = sortedMonths.map(m => {
+    const [y, mo] = m.split('-');
+    return new Date(y, mo-1).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+  });
+
+  // Cumulative
+  let cum = 0;
+  const data = sortedMonths.map(m => { cum += monthMap[m]; return cum; });
+
+  // Destroy previous chart if exists
+  if (analyticsChartInstance) { analyticsChartInstance.destroy(); analyticsChartInstance = null; }
+
+  const isDark = document.body.classList.contains('dark');
+  const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+  const textColor = isDark ? '#7a7670' : '#b0aca6';
+
+  const ctx = document.getElementById('analytics-chart').getContext('2d');
+  analyticsChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels.length ? labels : ['No data'],
+      datasets: [{
+        label: 'Total Members',
+        data: data.length ? data : [0],
+        borderColor: '#1D9E75',
+        backgroundColor: 'rgba(29,158,117,0.08)',
+        borderWidth: 2.5,
+        pointRadius: data.length > 12 ? 0 : 4,
+        pointBackgroundColor: '#1D9E75',
+        tension: 0.4,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: isDark ? '#2a2825' : '#fff',
+          borderColor: '#1D9E75',
+          borderWidth: 1,
+          titleColor: isDark ? '#f5f3ee' : '#1a1916',
+          bodyColor: '#1D9E75',
+          padding: 10,
+        }
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 } } },
+        y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 }, stepSize: 1, precision: 0 }, beginAtZero: true }
+      }
+    }
+  });
+
+  // ── Recent members (last 10) ──
+  const fields = currentDb.fields || [];
+  const tf = fields[0];
+  const recent = [...approved].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).slice(0,10);
+
+  if (!recent.length) {
+    document.getElementById('analytics-recent').innerHTML = '<p style="font-size:14px;color:var(--text-faint);text-align:center;padding:1rem;">No members yet.</p>';
+    return;
+  }
+
+  document.getElementById('analytics-recent').innerHTML = recent.map(r => {
+    const name = tf ? (r.data[tf.name] || '—') : 'Member';
+    const date = new Date(r.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="font-size:14px;font-weight:500;color:var(--text);">${escHtml(String(name))}</div>
+      <div style="font-size:12px;color:var(--text-faint);">${date}</div>
+    </div>`;
+  }).join('');
 }
 
 // ── DARK MODE ──
