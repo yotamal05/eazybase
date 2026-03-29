@@ -136,6 +136,8 @@
   #page-reset.active { display: flex; }
   #page-approvals { display: none; flex: 1; min-height: 100vh; }
   #page-approvals.active { display: block; }
+  #page-comms { display: none; flex: 1; min-height: 100vh; }
+  #page-comms.active { display: block; }
   #page-register { display: none; flex: 1; min-height: 100vh; }
   #page-register.active { display: block; }
   .approval-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 12px; }
@@ -1233,6 +1235,57 @@
   </div>
 </div>
 
+<!-- COMMUNICATIONS PAGE -->
+<div id="page-comms" class="page">
+  <div style="max-width:720px;margin:0 auto;padding:2rem 1.5rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h1 style="font-family:'DM Serif Display',serif;font-size:28px;color:var(--text);margin:0 0 4px;">✉️ Email Members</h1>
+        <p style="font-size:14px;color:var(--text-muted);margin:0;" id="comms-db-name"></p>
+      </div>
+      <button class="btn" onclick="goBackFromComms()">← Back</button>
+    </div>
+
+    <!-- No email field warning -->
+    <div id="comms-no-email" style="display:none;background:var(--danger-light);color:var(--danger);padding:1rem 1.25rem;border-radius:12px;font-size:14px;margin-bottom:1.5rem;">
+      This database has no email field. Add one via <strong>Manage Fields</strong> to send emails.
+    </div>
+
+    <!-- Compose section -->
+    <div id="comms-compose" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.75rem;margin-bottom:1.5rem;">
+      <div style="font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:1.25rem;">Compose</div>
+
+      <div class="form-group">
+        <label class="form-label">Subject</label>
+        <input class="form-input" id="comms-subject" type="text" placeholder="e.g. Important update for members">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Message</label>
+        <textarea class="form-textarea" id="comms-body" rows="6" placeholder="Write your message here…"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Send to</label>
+        <select class="form-select" id="comms-filter" onchange="updateCommsPreview()">
+          <option value="all">All approved members</option>
+        </select>
+      </div>
+
+      <div id="comms-preview" style="font-size:13px;color:var(--text-muted);margin-bottom:1rem;"></div>
+      <div id="comms-error" style="display:none;background:var(--danger-light);color:var(--danger);padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:1rem;font-size:13px;"></div>
+
+      <button class="btn btn-primary" id="comms-send-btn" onclick="sendEmailBlast()">Send email</button>
+    </div>
+
+    <!-- Sent history -->
+    <div>
+      <div style="font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.75rem;">Sent History</div>
+      <div id="comms-history"></div>
+    </div>
+  </div>
+</div>
+
 <!-- APPROVALS PAGE -->
 <div id="page-approvals" class="page">
   <div style="max-width:720px;margin:0 auto;padding:2rem 1.5rem;">
@@ -1720,6 +1773,7 @@ async function openDatabase(id) {
   if (isOwner()) {
     btns += `<button class="btn" onclick="openPermissions()">Share</button>`;
     btns += `<button class="btn" onclick="openRegistrationForm()">📋 Registration</button>`;
+    btns += `<button class="btn" onclick="openCommunications()">✉️ Email</button>`;
     btns += `<button class="btn" onclick="openAnalytics()">📊 Analytics</button>`;
     btns += `<button class="btn" onclick="openManageFields()">Manage fields</button>`;
   }
@@ -3291,6 +3345,164 @@ async function openAnalytics() {
   }).join('');
 }
 
+// ── COMMUNICATIONS ──
+let commsRecords = [], commsDb = null;
+
+async function openCommunications() {
+  commsDb = currentDb;
+  document.getElementById('comms-db-name').textContent = currentDb.name;
+  document.getElementById('comms-subject').value = '';
+  document.getElementById('comms-body').value = '';
+  document.getElementById('comms-error').style.display = 'none';
+
+  // Check for email field
+  const fields = currentDb.fields || [];
+  const emailField = fields.find(f => f.type === 'email');
+
+  if (!emailField) {
+    document.getElementById('comms-no-email').style.display = 'block';
+    document.getElementById('comms-compose').style.display = 'none';
+  } else {
+    document.getElementById('comms-no-email').style.display = 'none';
+    document.getElementById('comms-compose').style.display = 'block';
+
+    // Load approved records with emails
+    const { data: records } = await sb.from('records')
+      .select('*').eq('database_id', currentDb.id).eq('status', 'approved');
+    commsRecords = (records || []).filter(r => r.data[emailField.name]);
+
+    // Build filter options
+    const filterSel = document.getElementById('comms-filter');
+    filterSel.innerHTML = '<option value="all">All approved members</option>';
+    fields.filter(f => f.type === 'dropdown' || f.type === 'text').forEach(f => {
+      const values = [...new Set(commsRecords.map(r => r.data[f.name]).filter(Boolean))];
+      values.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = `${f.name}::${v}`;
+        opt.textContent = `${f.name}: ${v}`;
+        filterSel.appendChild(opt);
+      });
+    });
+
+    updateCommsPreview();
+  }
+
+  // Load history
+  loadCommsHistory();
+
+  // Update nav back button
+  document.getElementById('nav-back').innerHTML = `<button class="btn btn-ghost btn-sm nav-btn-mobile" onclick="goBackFromComms()" style="font-size:13px;padding:6px 10px;white-space:nowrap;">← Back</button>`;
+
+  showPage('page-comms');
+}
+
+function getCommsRecipients() {
+  const filter = document.getElementById('comms-filter').value;
+  if (filter === 'all') return commsRecords;
+  const [field, value] = filter.split('::');
+  return commsRecords.filter(r => r.data[field] === value);
+}
+
+function updateCommsPreview() {
+  const recipients = getCommsRecipients();
+  document.getElementById('comms-preview').textContent =
+    `${recipients.length} member${recipients.length !== 1 ? 's' : ''} will receive this email.`;
+}
+
+async function sendEmailBlast() {
+  const subject = document.getElementById('comms-subject').value.trim();
+  const body = document.getElementById('comms-body').value.trim();
+  const btn = document.getElementById('comms-send-btn');
+  const errEl = document.getElementById('comms-error');
+  errEl.style.display = 'none';
+
+  if (!subject) { errEl.textContent = 'Please enter a subject.'; errEl.style.display = 'block'; return; }
+  if (!body) { errEl.textContent = 'Please write a message.'; errEl.style.display = 'block'; return; }
+
+  const recipients = getCommsRecipients();
+  if (!recipients.length) { errEl.textContent = 'No recipients match the selected filter.'; errEl.style.display = 'block'; return; }
+
+  if (!confirm(`Send to ${recipients.length} member${recipients.length !== 1 ? 's' : ''}?`)) return;
+
+  btn.textContent = 'Sending…'; btn.disabled = true;
+
+  const fields = commsDb.fields || [];
+  const emailField = fields.find(f => f.type === 'email');
+  const emails = recipients.map(r => r.data[emailField.name]).filter(Boolean);
+
+  try {
+    const res = await fetch('https://nnkvneigeemokmvxcudk.supabase.co/functions/v1/send-email-blast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ recipients: emails, subject, body, dbName: commsDb.name })
+    });
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || 'Failed to send');
+
+    // Save to history
+    await sb.from('email_blasts').insert({
+      database_id: commsDb.id,
+      user_id: currentUser.id,
+      subject,
+      body,
+      filter_field: document.getElementById('comms-filter').value !== 'all' ? document.getElementById('comms-filter').value.split('::')[0] : null,
+      filter_value: document.getElementById('comms-filter').value !== 'all' ? document.getElementById('comms-filter').value.split('::')[1] : null,
+      recipient_count: data.sent
+    });
+
+    toast(`✅ Sent to ${data.sent} member${data.sent !== 1 ? 's' : ''}!`);
+    document.getElementById('comms-subject').value = '';
+    document.getElementById('comms-body').value = '';
+    loadCommsHistory();
+
+  } catch(e) {
+    logError('sendEmailBlast', e);
+    errEl.textContent = 'Failed to send. Please try again.';
+    errEl.style.display = 'block';
+  }
+
+  btn.textContent = 'Send email'; btn.disabled = false;
+}
+
+async function loadCommsHistory() {
+  const histEl = document.getElementById('comms-history');
+  if (!histEl) return;
+  histEl.innerHTML = '<div style="color:var(--text-faint);font-size:13px;">Loading…</div>';
+
+  const { data: blasts } = await sb.from('email_blasts')
+    .select('*').eq('database_id', commsDb.id)
+    .order('created_at', { ascending: false }).limit(20);
+
+  if (!blasts || !blasts.length) {
+    histEl.innerHTML = '<div style="color:var(--text-faint);font-size:13px;padding:1rem 0;">No emails sent yet.</div>';
+    return;
+  }
+
+  histEl.innerHTML = blasts.map(b => {
+    const date = new Date(b.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const filter = b.filter_field ? `${b.filter_field}: ${b.filter_value}` : 'All members';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);gap:1rem;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--text);">${escHtml(b.subject)}</div>
+        <div style="font-size:12px;color:var(--text-faint);margin-top:2px;">${filter} · ${date}</div>
+      </div>
+      <div style="font-size:13px;color:var(--accent);font-weight:500;white-space:nowrap;">${b.recipient_count} sent</div>
+    </div>`;
+  }).join('');
+}
+
+function goBackFromComms() {
+  commsDb = null;
+  commsRecords = [];
+  document.getElementById('nav-back').innerHTML = '';
+  if (currentDb) {
+    openDatabase(currentDb.id);
+  } else {
+    goHome();
+  }
+}
+
 // ── DARK MODE ──
 const MOON_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 const SUN_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
@@ -3420,7 +3632,7 @@ function switchPrivacyLang(lang) {
       </ul>
 
       <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Feedback & Contact</h3>
-      <p style="margin-bottom:1rem;">If you encounter an accessibility barrier or need assistance, please contact us at <a href="mailto:team@eazybase.app" style="color:var(--accent);">team@eazybase.app</a>. We aim to respond within 14 business days.</p>
+      <p style="margin-bottom:1rem;">If you encounter an accessibility barrier or need assistance, please contact us at <a href="/cdn-cgi/l/email-protection#cdb9a8aca08da8acb7b4afacbea8e3acbdbd" style="color:var(--accent);"><span class="__cf_email__" data-cfemail="d1a5b4b0bc91b4b0aba8b3b0a2b4ffb0a1a1">[email&#160;protected]</span></a>. We aim to respond within 14 business days.</p>
 
       <div style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border);">
         <p style="font-size:13px;color:var(--text-faint);">This statement was last updated: March 2026. Prepared in accordance with Israel Standard IS 5568 and the Equal Rights for Persons with Disabilities Law 5758-1998.</p>
@@ -3535,13 +3747,4 @@ function switchPrivacyLang(lang) {
       <p>EazyBase מיועד לבני 18 ומעלה. בהתאם לחוק הכשרות המשפטית והאפוטרופסות, תשכ"ב-1962, עיבוד מידע של קטינים מתחת לגיל 18 מחייב הסכמת האפוטרופוס החוקי שלהם.</p>
 
       <h2>10. העברת נתונים לחו"ל</h2>
-      <p>הנתונים שלך מאוחסנים באיחוד האירופי (Supabase, גרמניה). מדינות האיחוד האירופי מוכרות על ידי ישראל כמעניקות רמת הגנה מספקת — העברה זו חוקית לפי הדין הישראלי.</p>
-
-
-      </div>
-    </div>
-  </div>
-</div>
-
-</body>
-</html>
+      <p>הנתונים שלך מאוחסנים באיחוד האירופי (Supabase, גרמניה). מדינות האיחוד האירופי מוכרות על ידי ישראל כמעניקות רמת הגנה מס�
