@@ -1265,6 +1265,16 @@
         <textarea class="form-textarea" id="comms-body" rows="6" placeholder="Write your message here…"></textarea>
       </div>
 
+      <div id="comms-card-wrap" style="display:none;margin-bottom:1rem;">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;user-select:none;">
+          <input type="checkbox" id="comms-include-card" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;margin-top:2px;">
+          <div>
+            <span style="font-size:14px;font-weight:500;">Include membership card button</span>
+            <p style="font-size:12px;color:var(--text-faint);margin-top:2px;">Adds a "View my card" button to each email linking to that member's personal card.</p>
+          </div>
+        </label>
+      </div>
+
       <div class="form-group">
         <label class="form-label">Send to</label>
         <select class="form-select" id="comms-filter" onchange="updateCommsPreview()">
@@ -3385,6 +3395,12 @@ async function openCommunications() {
     });
 
     updateCommsPreview();
+
+    // Show card checkbox if cards enabled
+    const cardWrap = document.getElementById('comms-card-wrap');
+    if (cardWrap) cardWrap.style.display = commsDb.cards_enabled ? 'block' : 'none';
+    const cardCheck = document.getElementById('comms-include-card');
+    if (cardCheck) cardCheck.checked = false;
   }
 
   // Load history
@@ -3434,7 +3450,7 @@ async function sendEmailBlast() {
     const res = await fetch('https://nnkvneigeemokmvxcudk.supabase.co/functions/v1/send-email-blast', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
-      body: JSON.stringify({ recipients: emails, subject, body, dbName: commsDb.name })
+      body: JSON.stringify({ recipients: recipientList, subject, body, dbName: commsDb.name })
     });
     const data = await res.json();
 
