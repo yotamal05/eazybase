@@ -32,6 +32,8 @@
     --rank3: #221608; --rank3t: #d4943a;
     --rank4: #220d0d; --rank4t: #e07070;
   }
+  .skip-nav { position:absolute; top:-100px; left:0; background:var(--accent); color:#fff; padding:8px 16px; border-radius:0 0 8px 0; font-size:14px; font-weight:500; text-decoration:none; z-index:99999; transition:top 0.2s; }
+  .skip-nav:focus { top:0; }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; transition: background 0.3s ease, color 0.3s ease; display: flex; flex-direction: column; }
 
   /* Dark mode surface transitions */
@@ -665,8 +667,9 @@
 </style>
 </head>
 <body>
+<a href="#main-content" class="skip-nav">Skip to main content</a>
 
-<nav>
+<nav aria-label="Main navigation">
   <div style="display:flex;align-items:center;gap:8px;">
     <div id="nav-back"></div>
     <div class="nav-logo" onclick="goHome()">Eazy<span>Base</span></div>
@@ -744,6 +747,7 @@
   </div>
 </div>
 
+<main id="main-content">
 <!-- HOME -->
 <div id="page-home" class="page">
   <div class="home-header">
@@ -782,7 +786,7 @@
   <div class="scanner-header">
     <div class="scanner-top-row">
       <div class="scanner-title">Eazy<span style="color:var(--accent)">Base</span> — Scanner</div>
-      <button class="scanner-x" id="scanner-close-btn">✕</button>
+      <button class="scanner-x" id="scanner-close-btn" aria-label="Close scanner">✕</button>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding-bottom:1.25rem;">
       <div class="scanner-tabs">
@@ -840,7 +844,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">New database</div>
-      <button class="modal-close" onclick="closeModal('modal-create-db')">×</button>
+      <button class="modal-close" onclick="closeModal('modal-create-db')" aria-label="Close">×</button>
     </div>
     <div class="form-group">
       <label class="form-label">Database name *</label>
@@ -896,7 +900,7 @@
   <div class="modal modal-wide">
     <div class="modal-header">
       <div class="modal-title" id="record-form-title">Add record</div>
-      <button class="modal-close" onclick="closeModal('modal-record-form')">×</button>
+      <button class="modal-close" onclick="closeModal('modal-record-form')" aria-label="Close">×</button>
     </div>
     <div id="record-form-fields"></div>
     <div class="modal-footer">
@@ -912,7 +916,7 @@
   <div class="modal modal-wide">
     <div class="modal-header">
       <div class="modal-title" id="record-detail-title"></div>
-      <button class="modal-close" onclick="closeModal('modal-record-detail')">×</button>
+      <button class="modal-close" onclick="closeModal('modal-record-detail')" aria-label="Close">×</button>
     </div>
     <div class="record-detail-fields" id="record-detail-fields"></div>
     <div id="record-card-btn-wrap"></div>
@@ -934,7 +938,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">Manage fields</div>
-      <button class="modal-close" onclick="closeModal('modal-manage-fields')">×</button>
+      <button class="modal-close" onclick="closeModal('modal-manage-fields')" aria-label="Close">×</button>
     </div>
     <div class="fields-list" id="manage-fields-list"></div>
     <div class="add-field-row" style="margin-top:8px;">
@@ -973,7 +977,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">Share database</div>
-      <button class="modal-close" onclick="closeModal('modal-permissions')">×</button>
+      <button class="modal-close" onclick="closeModal('modal-permissions')" aria-label="Close">×</button>
     </div>
     <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.25rem;">Share this database with other users and set their rank.</p>
     <div class="permission-list" id="permission-list"></div>
@@ -998,7 +1002,7 @@
   <div class="modal modal-wide">
     <div class="modal-header">
       <div class="modal-title">Import records</div>
-      <button class="modal-close" onclick="closeModal('modal-bulk-import')">×</button>
+      <button class="modal-close" onclick="closeModal('modal-bulk-import')" aria-label="Close">×</button>
     </div>
     <div class="privacy-lang-tabs" style="margin-bottom:1.25rem;">
       <button class="privacy-lang-tab active" id="import-tab-csv" onclick="switchImportTab('csv')">📄 CSV / Excel</button>
@@ -1038,7 +1042,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">Public link</div>
-      <button class="modal-close" onclick="closeModal('modal-public-link')">×</button>
+      <button class="modal-close" onclick="closeModal('modal-public-link')" aria-label="Close">×</button>
     </div>
     <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.25rem;line-height:1.6;">Share a read-only view of this database with anyone — no login required. They can search and view records but cannot add or edit anything.</p>
     <div id="public-link-off">
@@ -1062,7 +1066,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">Account settings</div>
-      <button class="modal-close" onclick="closeModal('modal-settings')">×</button>
+      <button class="modal-close" onclick="closeModal('modal-settings')" aria-label="Close">×</button>
     </div>
 
     <div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border);">
@@ -1113,7 +1117,7 @@
   <div class="modal modal-wide">
     <div class="modal-header">
       <div class="modal-title">🪪 Membership Cards</div>
-      <button class="modal-close" onclick="closeModal('modal-card-manager')">×</button>
+      <button class="modal-close" onclick="closeModal('modal-card-manager')" aria-label="Close">×</button>
     </div>
     <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.25rem;line-height:1.6;">Share card links with your members — they can view and download their card as a PDF.</p>
     <input class="form-input" id="card-manager-search" placeholder="Search members…" oninput="renderCardManagerList()" style="margin-bottom:1rem;">
@@ -1127,7 +1131,7 @@
   <div class="modal modal-wide">
     <div class="modal-header">
       <div class="modal-title">📊 Analytics</div>
-      <button class="modal-close" onclick="closeModal('modal-analytics')">×</button>
+      <button class="modal-close" onclick="closeModal('modal-analytics')" aria-label="Close">×</button>
     </div>
 
     <!-- Stat cards -->
@@ -1158,7 +1162,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">📋 Registration Form</div>
-      <button class="modal-close" onclick="closeModal('modal-registration')">×</button>
+      <button class="modal-close" onclick="closeModal('modal-registration')" aria-label="Close">×</button>
     </div>
     <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.25rem;line-height:1.6;">
       Create a public form that anyone can fill out to register — no EazyBase account needed.
@@ -1929,6 +1933,8 @@ function printQR() {
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  .skip-nav { position:absolute; top:-100px; left:0; background:var(--accent); color:#fff; padding:8px 16px; border-radius:0 0 8px 0; font-size:14px; font-weight:500; text-decoration:none; z-index:99999; transition:top 0.2s; }
+  .skip-nav:focus { top:0; }
   body {
     font-family: 'DM Sans', sans-serif;
     background: #f5f3ee;
@@ -1979,14 +1985,17 @@ function printQR() {
   .field-label { color: #7a7670; font-weight: 500; white-space: nowrap; }
   .field-value { color: #1a1916; text-align: right; word-break: break-word; }
   @media print {
-    body { background: #f5f3ee; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .skip-nav { position:absolute; top:-100px; left:0; background:var(--accent); color:#fff; padding:8px 16px; border-radius:0 0 8px 0; font-size:14px; font-weight:500; text-decoration:none; z-index:99999; transition:top 0.2s; }
+  .skip-nav:focus { top:0; }
+  body { background: #f5f3ee; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
 </head>
 <body>
+<a href="#main-content" class="skip-nav">Skip to main content</a>
 <div class="card">
   <div class="logo">Eazy<span>Base</span></div>
-  <div class="qr-wrap"><img src="${src}"></div>
+  <div class="qr-wrap"><img src="${src}" alt="QR code for ${escHtml(title)}"></div>
   <div class="record-title">${escHtml(title)}</div>
   <div class="db-name">${escHtml(currentDb.name)}</div>
   ${extraFields ? `<div class="fields">${extraFields}</div>` : ''}
@@ -3304,6 +3313,8 @@ function initDarkMode() {
 }
 
 // ── PRIVACY POLICY ──
+function openA11yStatement() { openModal('modal-a11y'); }
+
 function openPrivacyPolicy(lang = 'en') {
   switchPrivacyLang(lang);
   openModal('modal-privacy');
@@ -3364,12 +3375,16 @@ function switchPrivacyLang(lang) {
 })();
 </script>
 
+</main>
+
 <!-- SITE FOOTER -->
 <footer class="site-footer" id="site-footer">
   <div class="site-footer-inner">
     <div class="site-footer-logo">Eazy<span>Base</span></div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;">
       <button class="site-footer-link" onclick="openPrivacyPolicy()">Privacy Policy</button>
+      <span class="site-footer-sep">·</span>
+      <button class="site-footer-link" onclick="openA11yStatement()">Accessibility</button>
       <span class="site-footer-sep">·</span>
       <button class="site-footer-link" onclick="openPrivacyPolicy('he')">מדיניות פרטיות</button>
       <span class="site-footer-sep">·</span>
@@ -3378,12 +3393,51 @@ function switchPrivacyLang(lang) {
   </div>
 </footer>
 
+<!-- MODAL: Accessibility Statement -->
+<div class="modal-overlay" id="modal-a11y">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <div class="modal-title">Accessibility Statement</div>
+      <button class="modal-close" onclick="closeModal('modal-a11y')" aria-label="Close">×</button>
+    </div>
+    <div style="font-size:14px;color:var(--text);line-height:1.8;">
+      <p style="margin-bottom:1rem;"><strong>EazyBase</strong> is committed to making our platform accessible to all users, including people with disabilities.</p>
+
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Our Commitment</h3>
+      <p style="margin-bottom:1rem;">We strive to conform to the <strong>Web Content Accessibility Guidelines (WCAG) 2.0 Level AA</strong>, which is the standard referenced by Israel Standard IS 5568 under the Equal Rights for Persons with Disabilities Law (ERPD).</p>
+
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Current Status</h3>
+      <p style="margin-bottom:1rem;">EazyBase is a growing product. We are actively working to improve accessibility across all features. Known areas of ongoing improvement include screen reader support for dynamic content and advanced form interactions.</p>
+
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Accessibility Features</h3>
+      <ul style="margin-bottom:1rem;padding-left:1.5rem;">
+        <li>Keyboard navigation support throughout the application</li>
+        <li>Sufficient color contrast ratios for text and interface elements</li>
+        <li>Labeled form fields and interactive elements</li>
+        <li>Responsive design supporting text resizing up to 200%</li>
+        <li>Skip navigation link for screen reader users</li>
+        <li>ARIA labels on icon buttons and controls</li>
+      </ul>
+
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">Feedback & Contact</h3>
+      <p style="margin-bottom:1rem;">If you encounter an accessibility barrier or need assistance, please contact us at <a href="mailto:team@eazybase.app" style="color:var(--accent);">team@eazybase.app</a>. We aim to respond within 14 business days.</p>
+
+      <div style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border);">
+        <p style="font-size:13px;color:var(--text-faint);">This statement was last updated: March 2026. Prepared in accordance with Israel Standard IS 5568 and the Equal Rights for Persons with Disabilities Law 5758-1998.</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal('modal-a11y')">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Privacy Policy -->
 <div class="modal-overlay" id="modal-privacy">
   <div class="modal modal-wide">
     <div class="modal-header">
       <div class="modal-title" id="privacy-modal-title">Privacy Policy</div>
-      <button class="modal-close" onclick="closeModal('modal-privacy')">×</button>
+      <button class="modal-close" onclick="closeModal('modal-privacy')" aria-label="Close">×</button>
     </div>
     <div class="privacy-lang-tabs">
       <button class="privacy-lang-tab active" id="privacy-tab-en" onclick="switchPrivacyLang('en')">English</button>
